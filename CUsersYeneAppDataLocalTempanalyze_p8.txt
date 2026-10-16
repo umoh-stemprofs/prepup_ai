@@ -1,0 +1,7 @@
+warning - Unused import: 'dart:io' - lib\data\local\database_helper.dart:2:8 - unused_import
+warning - Unused import: '../../core/constants.dart' - lib\data\local\database_helper.dart:8:8 - unused_import
+warning - Unused import: 'results_screen.dart' - lib\screens\quiz\exam_setup_screen.dart:8:8 - unused_import
+warning - A value for optional parameter 'key' isn't ever given - lib\screens\quiz\exam_setup_screen.dart:388:11 - unused_element_parameter
+warning - Unused import: '../../core/constants.dart' - lib\screens\quiz\results_screen.dart:6:8 - unused_import
+
+5 issues found. (ran in 67.4s)

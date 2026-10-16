@@ -49,10 +49,19 @@ class QuizSession {
         score: json['score'] as int,
         totalQuestions: json['total_questions'] as int,
         scorePercentage: (json['score_percentage'] as num).toDouble(),
-        isPass: json['is_pass'] as bool,
+        isPass: _decodeBool(json['is_pass']),
         timeSpentSeconds: json['time_spent_seconds'] as int,
         completedAt: DateTime.parse(json['completed_at'] as String),
       );
+
+  /// Decodes a boolean stored as either a Dart [bool] or an integer 0/1
+  /// (sqflite does not support boolcolumns).
+  static bool _decodeBool(Object? value) {
+    if (value is bool) return value;
+    if (value is int) return value != 0;
+    if (value == null) return false;
+    return value.toString().toLowerCase() == 'true';
+  }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'session_uuid': sessionUuid,

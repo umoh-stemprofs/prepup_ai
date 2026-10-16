@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants.dart';
 import '../../providers/auth_provider.dart';
+import '../quiz/exam_setup_screen.dart';
 
 /// Shared dashboard / home destination for both guests and signed-in users.
 ///
@@ -64,9 +65,9 @@ class HomeScreen extends StatelessWidget {
               const Spacer(),
               FilledButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Dashboard practice area arriving soon.'),
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ExamSetupScreen(),
                     ),
                   );
                 },

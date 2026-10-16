@@ -1,11 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
-import '../../core/constants.dart';
+import '../../models/quiz_session.dart';
+import '../../models/weak_area.dart';
 
 /// Singleton SQLite helper for the local offline cache.
 ///
@@ -153,5 +152,37 @@ class DatabaseHelper {
       'SELECT COUNT(*) AS c FROM local_questions',
     );
     return (row.first['c'] as int?) ?? 0;
+  }
+
+  /// Persists a completed [QuizSession] row into [local_quiz_sessions].
+  ///
+  /// Uses `INSERT OR REPLACE` so re-enqueuing the same session UUID upserts
+  /// instead of throwing a primary-key conflict.
+  ///
+  /// sqflite does not accept Dart [bool] values, so [isPass] is stored as
+  /// 1/0 to match the INTEGER column.
+  Future<void> saveQuizSession(QuizSession session) async {
+    final db = await database;
+    await db.insert(
+      'local_quiz_sessions',
+      {
+        ...session.toMap(),
+        'is_pass': session.isPass ? 1 : 0,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Persists one or more [WeakArea] rows belonging to a completed session.
+  Future<void> saveWeakAreas(List<WeakArea> areas) async {
+    final db = await database;
+    final batch = db.batch();
+    for (final area in areas) {
+      batch.insert('local_weak_areas', {
+        ...area.toMap(),
+        'session_uuid': '',
+      });
+    }
+    await batch.commit(noResult: true);
   }
 }

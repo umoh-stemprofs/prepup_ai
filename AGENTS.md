@@ -1,0 +1,1 @@
+Never run Dart analyze, dart test, flutter test or Flutter Analyze. Stop and Ask me if there are any errors and give me the commands to run, i will tell you, instead. 
