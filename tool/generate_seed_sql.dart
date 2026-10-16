@@ -90,15 +90,9 @@ Future<void> main() async {
     buffer.write("', ");
     buffer.write("'");
     buffer.write(sqlEscape(_requireString(q['question_text'], 'question_text')));
-    buffer.write("', ARRAY[");
-    final options = q['options'] as List;
-    for (var j = 0; j < options.length; j++) {
-      if (j > 0) buffer.write(', ');
-      buffer.write("'");
-      buffer.write(sqlEscape(options[j].toString()));
-      buffer.write("'");
-    }
-    buffer.write("], ");
+    buffer.write("', ");
+    buffer.write(_jsonbArray(q['options'] as List));
+    buffer.write(", ");
     buffer.write(_requireInt(q['correct_option_index'], 'correct_option_index'));
     buffer.write(", ");
     buffer.write("'");
@@ -116,4 +110,12 @@ Future<void> main() async {
 
   await File(_outputPath).writeAsString(buffer.toString());
   print('Wrote ${questions.length} question rows to $_outputPath');
+}
+
+String _jsonbArray(List options) {
+  final parts = <String>[];
+  for (final option in options) {
+    parts.add("'" + sqlEscape(option.toString()) + "'");
+  }
+  return 'jsonb_build_array(' + parts.join(', ') + ')::jsonb';
 }
