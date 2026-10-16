@@ -1,1 +1,542 @@
-[]
+[
+  {
+    "id": "q_math_001",
+    "subject": "Mathematics",
+    "syllabus_topic": "Algebra",
+    "question_text": "If 2x + 5 = 17, what is the value of x?",
+    "options": ["5", "6", "7", "8"],
+    "correct_option_index": 1,
+    "explanation": "Subtract 5 from both sides to get 2x = 12, then divide by 2 to get x = 6."
+  },
+  {
+    "id": "q_math_002",
+    "subject": "Mathematics",
+    "syllabus_topic": "Algebra",
+    "question_text": "Simplify: 3(x + 4) - 2x.",
+    "options": ["x + 12", "x + 4", "5x + 12", "5x + 4"],
+    "correct_option_index": 0,
+    "explanation": "Multiply out 3(x + 4) to get 3x + 12, then subtract 2x to get x + 12."
+  },
+  {
+    "id": "q_math_003",
+    "subject": "Mathematics",
+    "syllabus_topic": "Algebra",
+    "question_text": "Factorize completely: x^2 - 9.",
+    "options": ["(x - 3)(x - 3)", "(x + 3)(x + 3)", "(x + 3)(x - 3)", "(x + 9)(x - 1)"],
+    "correct_option_index": 2,
+    "explanation": "x^2 - 9 is a difference of two squares, which factorizes as (x + 3)(x - 3)."
+  },
+  {
+    "id": "q_math_004",
+    "subject": "Mathematics",
+    "syllabus_topic": "Algebra",
+    "question_text": "Solve the equation: x/3 = 7.",
+    "options": ["3", "10", "21", "24"],
+    "correct_option_index": 2,
+    "explanation": "Multiply both sides by 3 to get x = 21."
+  },
+  {
+    "id": "q_math_005",
+    "subject": "Mathematics",
+    "syllabus_topic": "Algebra",
+    "question_text": "If a = 3 and b = 4, find the value of 2a + 3b.",
+    "options": ["12", "15", "17", "18"],
+    "correct_option_index": 3,
+    "explanation": "2(3) + 3(4) = 6 + 12 = 18, so the correct answer is 18."
+  },
+  {
+    "id": "q_math_006",
+    "subject": "Mathematics",
+    "syllabus_topic": "Geometry",
+    "question_text": "What is the area of a rectangle with length 8 cm and width 5 cm?",
+    "options": ["13 cm²", "26 cm²", "30 cm²", "40 cm²"],
+    "correct_option_index": 3,
+    "explanation": "Area = length × width = 8 × 5 = 40 cm²."
+  },
+  {
+    "id": "q_math_007",
+    "subject": "Mathematics",
+    "syllabus_topic": "Geometry",
+    "question_text": "The angles of a triangle are in the ratio 1:2:3. What is the smallest angle?",
+    "options": ["30°", "45°", "60°", "90°"],
+    "correct_option_index": 0,
+    "explanation": "The sum of angles in a triangle is 180°. 1+2+3 = 6 parts, so one part is 180°/6 = 30°. The smallest angle is 30°."
+  },
+  {
+    "id": "q_math_008",
+    "subject": "Mathematics",
+    "syllabus_topic": "Number",
+    "question_text": "What is the HCF of 12 and 18?",
+    "options": ["2", "3", "6", "9"],
+    "correct_option_index": 2,
+    "explanation": "The highest common factor of 12 and 18 is 6, since 12 = 2²×3 and 18 = 2×3², and the common part is 2×3 = 6."
+  },
+  {
+    "id": "q_math_009",
+    "subject": "Mathematics",
+    "syllabus_topic": "Number",
+    "question_text": "What is 15% of 200?",
+    "options": ["15", "20", "25", "30"],
+    "correct_option_index": 3,
+    "explanation": "15% of 200 = (15/100) × 200 = 0.15 × 200 = 30."
+  },
+  {
+    "id": "q_math_010",
+    "subject": "Mathematics",
+    "syllabus_topic": "Number",
+    "question_text": "What is the next term in the sequence: 2, 5, 8, 11, ...?",
+    "options": ["12", "13", "14", "15"],
+    "correct_option_index": 2,
+    "explanation": "The sequence increases by 3 each time. After 11, the next term is 11 + 3 = 14."
+  },
+  {
+    "id": "q_eng_001",
+    "subject": "English Language",
+    "syllabus_topic": "Comprehension",
+    "question_text": "Choose the word that best completes the sentence: 'The teacher's explanation was ______ useful to the students.'",
+    "options": ["very", "the", "a", "an"],
+    "correct_option_index": 0,
+    "explanation": "The adverb 'very' correctly qualifies the adjective 'useful': 'very useful'."
+  },
+  {
+    "id": "q_eng_002",
+    "subject": "English Language",
+    "syllabus_topic": "Grammar",
+    "question_text": "Choose the correct form: 'She ______ to the market every Saturday.'",
+    "options": ["go", "goes", "going", "gone"],
+    "correct_option_index": 1,
+    "explanation": "The subject 'She' is third person singular, and 'every Saturday' is a habitual action, so the present simple 'goes' is correct."
+  },
+  {
+    "id": "q_eng_003",
+    "subject": "English Language",
+    "syllabus_topic": "Grammar",
+    "question_text": "Identify the correct sentence: 'He don't know the answer.'",
+    "options": ["He don't know the answer.", "He doesn't know the answer.", "He not know the answer.", "He no knows the answer."],
+    "correct_option_index": 1,
+    "explanation": "'Doesn't' is the correct negative form for a third person singular subject like 'He'."
+  },
+  {
+    "id": "q_eng_004",
+    "subject": "English Language",
+    "syllabus_topic": "Vocabulary",
+    "question_text": "Choose the word that means the opposite of 'generous'.",
+    "options": ["kind", "selfish", "honest", "loyal"],
+    "correct_option_index": 1,
+    "explanation": "'Selfish' means caring only about oneself, which is the opposite of 'generous' meaning willing to give to others."
+  },
+  {
+    "id": "q_eng_005",
+    "subject": "English Language",
+    "syllabus_topic": "Comprehension",
+    "question_text": "Choose the best word to complete: 'The noise from the construction site was ______.'",
+    "options": ["pleasant", "loud", "delicious", "soft"],
+    "correct_option_index": 1,
+    "explanation": "Construction sites are typically noisy, so 'loud' best describes the noise."
+  },
+  {
+    "id": "q_eng_006",
+    "subject": "English Language",
+    "syllabus_topic": "Vocabulary",
+    "question_text": "Choose the correct word: 'The ______ barked at the stranger.'",
+    "options": ["cat", "dog", "bird", "fish"],
+    "correct_option_index": 1,
+    "explanation": "Dogs typically bark at strangers; cats meow, birds chirp, and fish do not bark."
+  },
+  {
+    "id": "q_eng_007",
+    "subject": "English Language",
+    "syllabus_topic": "Grammar",
+    "question_text": "Choose the correct form: 'I have been ______ for two hours.'",
+    "options": ["wait", "waited", "waiting", "waits"],
+    "correct_option_index": 2,
+    "explanation": "The present perfect continuous tense requires 'have/has been + verb-ing', so 'waiting' is correct."
+  },
+  {
+    "id": "q_eng_008",
+    "subject": "English Language",
+    "syllabus_topic": "Comprehension",
+    "question_text": "Choose the best word to complete: 'The ______ sun rose over the hills.'",
+    "options": ["bright", "table", "soft", "heavy"],
+    "correct_option_index": 0,
+    "explanation": "'Bright' describes the sun positively and accurately in a sunrise context."
+  },
+  {
+    "id": "q_eng_009",
+    "subject": "English Language",
+    "syllabus_topic": "Grammar",
+    "question_text": "Choose the correct sentence: 'She is taller than I.'",
+    "options": ["She is taller than I.", "She is taller than me.", "She is more taller than me.", "She is taller than I am."],
+    "correct_option_index": 3,
+    "explanation": "'Than I' or 'than I am' is the formal comparative structure; 'more taller' is doubly incorrect as 'taller' is already comparative."
+  },
+  {
+    "id": "q_eng_010",
+    "subject": "English Language",
+    "syllabus_topic": "Vocabulary",
+    "question_text": "Choose the synonym of 'happy'.",
+    "options": ["sad", "angry", "joyful", "tired"],
+    "correct_option_index": 2,
+    "explanation": "'Joyful' means full of joy, which is a synonym of 'happy'."
+  },
+  {
+    "id": "q_phys_001",
+    "subject": "Physics",
+    "syllabus_topic": "Motion",
+    "question_text": "What is the SI unit of speed?",
+    "options": ["Metre", "Metre per second", "Second", "Kilogram"],
+    "correct_option_index": 1,
+    "explanation": "Speed is distance divided by time, so the SI unit is metre per second (m/s)."
+  },
+  {
+    "id": "q_phys_002",
+    "subject": "Physics",
+    "syllabus_topic": "Motion",
+    "question_text": "A car travels 120 m in 6 seconds. What is its speed?",
+    "options": ["10 m/s", "15 m/s", "20 m/s", "720 m/s"],
+    "correct_option_index": 2,
+    "explanation": "Speed = distance / time = 120 / 6 = 20 m/s."
+  },
+  {
+    "id": "q_phys_003",
+    "subject": "Physics",
+    "syllabus_topic": "Force",
+    "question_text": "According to Newton's Second Law, force equals:",
+    "options": ["mass × velocity", "mass × acceleration", "mass ÷ acceleration", "pressure × area"],
+    "correct_option_index": 1,
+    "explanation": "Newton's Second Law states F = m × a, where F is force, m is mass, and a is acceleration."
+  },
+  {
+    "id": "q_phys_004",
+    "subject": "Physics",
+    "syllabus_topic": "Energy",
+    "question_text": "What form of energy does a moving object possess?",
+    "options": ["Potential energy", "Kinetic energy", "Heat energy", "Sound energy"],
+    "correct_option_index": 1,
+    "explanation": "A moving object possesses kinetic energy, the energy of motion."
+  },
+  {
+    "id": "q_phys_005",
+    "subject": "Physics",
+    "syllabus_topic": "Waves",
+    "question_text": "Which of the following is a longitudinal wave?",
+    "options": ["Light wave", "Sound wave", "Water wave", "Radio wave"],
+    "correct_option_index": 1,
+    "explanation": "Sound waves are longitudinal, meaning the particles vibrate parallel to the direction of wave travel."
+  },
+  {
+    "id": "q_chem_001",
+    "subject": "Chemistry",
+    "syllabus_topic": "Atomic Structure",
+    "question_text": "What is the atomic number of an oxygen atom?",
+    "options": ["6", "8", "16", "17"],
+    "correct_option_index": 1,
+    "explanation": "Oxygen has 8 protons, so its atomic number is 8."
+  },
+  {
+    "id": "q_chem_002",
+    "subject": "Chemistry",
+    "syllabus_topic": "Chemical Bonding",
+    "question_text": "What type of bond forms between sodium and chlorine in NaCl?",
+    "options": ["Covalent bond", "Ionic bond", "Metallic bond", "Hydrogen bond"],
+    "correct_option_index": 1,
+    "explanation": "Sodium donates an electron to chlorine, forming an ionic bond in sodium chloride."
+  },
+  {
+    "id": "q_chem_003",
+    "subject": "Chemistry",
+    "syllabus_topic": "Reactions",
+    "question_text": "Which gas is produced when an acid reacts with a metal?",
+    "options": ["Oxygen", "Hydrogen", "Carbon dioxide", "Nitrogen"],
+    "correct_option_index": 1,
+    "explanation": "Metals react with acids to produce hydrogen gas and a salt."
+  },
+  {
+    "id": "q_chem_004",
+    "subject": "Chemistry",
+    "syllabus_topic": "Periodic Table",
+    "question_text": "Which group of the periodic table contains the noble gases?",
+    "options": ["Group 1", "Group 2", "Group 17", "Group 18"],
+    "correct_option_index": 3,
+    "explanation": "Noble gases such as helium, neon, and argon are in Group 18 of the periodic table."
+  },
+  {
+    "id": "q_chem_005",
+    "subject": "Chemistry",
+    "syllabus_topic": "Formulae",
+    "question_text": "What is the chemical formula for water?",
+    "options": ["H2O", "CO2", "NaCl", "O2"],
+    "correct_option_index": 0,
+    "explanation": "Water consists of two hydrogen atoms and one oxygen atom, so its formula is H2O."
+  },
+  {
+    "id": "q_bio_001",
+    "subject": "Biology",
+    "syllabus_topic": "Cell Biology",
+    "question_text": "Which organelle is known as the powerhouse of the cell?",
+    "options": ["Nucleus", "Mitochondria", "Ribosome", "Cell membrane"],
+    "correct_option_index": 1,
+    "explanation": "Mitochondria are called the powerhouse of the cell because they generate ATP through respiration."
+  },
+  {
+    "id": "q_bio_002",
+    "subject": "Biology",
+    "syllabus_topic": "Photosynthesis",
+    "question_text": "Which gas is absorbed by plants during photosynthesis?",
+    "options": ["Oxygen", "Nitrogen", "Carbon dioxide", "Hydrogen"],
+    "correct_option_index": 2,
+    "explanation": "During photosynthesis, plants absorb carbon dioxide from the air to make glucose."
+  },
+  {
+    "id": "q_bio_003",
+    "subject": "Biology",
+    "syllabus_topic": "The Cell",
+    "question_text": "What is the functional unit of the human nervous system?",
+    "options": ["Neuron", "Muscle cell", "Red blood cell", "Bone cell"],
+    "correct_option_index": 0,
+    "explanation": "The neuron (nerve cell) is the basic functional unit of the nervous system."
+  },
+  {
+    "id": "q_bio_004",
+    "subject": "Biology",
+    "syllabus_topic": "Heredity",
+    "question_text": "Who is known as the father of genetics?",
+    "options": ["Charles Darwin", "Gregor Mendel", "Louis Pasteur", "Alexander Fleming"],
+    "correct_option_index": 1,
+    "explanation": "Gregor Mendel's work with pea plants established the basic laws of inheritance, so he is called the father of genetics."
+  },
+  {
+    "id": "q_bio_005",
+    "subject": "Biology",
+    "syllabus_topic": "Ecology",
+    "question_text": "What is a group of organisms of the same species living in a given area called?",
+    "options": ["Community", "Population", "Ecosystem", "Biosphere"],
+    "correct_option_index": 1,
+    "explanation": "A population is a group of organisms of the same species living together in the same area at the same time."
+  },
+  {
+    "id": "q_eco_001",
+    "subject": "Economics",
+    "syllabus_topic": "Basic Concepts",
+    "question_text": "What does 'scarcity' mean in economics?",
+    "options": ["Unlimited wants with limited resources", "Plenty of everything", "No need for money", "Free goods only"],
+    "correct_option_index": 0,
+    "explanation": "Scarcity means human wants are unlimited but the resources to satisfy them are limited."
+  },
+  {
+    "id": "q_eco_002",
+    "subject": "Economics",
+    "syllabus_topic": "Supply and Demand",
+    "question_text": "When demand for a commodity increases and supply remains constant, the price tends to:",
+    "options": ["Fall", "Rise", "Stay the same", "Double"],
+    "correct_option_index": 1,
+    "explanation": "Higher demand with unchanged supply pushes the price upward towards a new equilibrium."
+  },
+  {
+    "id": "q_eco_003",
+    "subject": "Economics",
+    "syllabus_topic": "Types of Goods",
+    "question_text": "Which of the following is a capital good?",
+    "options": ["Milk", "A tractor", "A shirt", "A loaf of bread"],
+    "correct_option_index": 1,
+    "explanation": "A capital good is a machine or tool used to produce other goods, such as a tractor on a farm."
+  },
+  {
+    "id": "q_eco_004",
+    "subject": "Economics",
+    "syllabus_topic": "Demand",
+    "question_text": "What is the law of demand?",
+    "options": ["Price and quantity demanded move in the same direction", "As price falls, quantity demanded rises", "As price rises, quantity demanded rises", "Demand never changes"],
+    "correct_option_index": 1,
+    "explanation": "The law of demand states that, ceteris paribus, a higher price leads to a smaller quantity demanded, and vice versa."
+  },
+  {
+    "id": "q_eco_005",
+    "subject": "Economics",
+    "syllabus_topic": "Money",
+    "question_text": "Which of the following is a function of money?",
+    "options": ["It tastes delicious", "It serves as a medium of exchange", "It grows on trees", "It is always free"],
+    "correct_option_index": 1,
+    "explanation": "One key function of money is to act as a medium of exchange, making trade easier than barter."
+  },
+  {
+    "id": "q_geo_001",
+    "subject": "Geography",
+    "syllabus_topic": "Map Work",
+    "question_text": "What does a map scale show?",
+    "options": ["The colour of the map", "The relationship between distance on the map and real distance on the ground", "The size of the printer", "The date the map was printed"],
+    "correct_option_index": 1,
+    "explanation": "A map scale shows how map distances relate to actual distances on the ground, for example 1 cm = 1 km."
+  },
+  {
+    "id": "q_geo_002",
+    "subject": "Geography",
+    "syllabus_topic": "Weather and Climate",
+    "question_text": "Which instrument measures rainfall?",
+    "options": ["Thermometer", "Rain gauge", "Barometer", "Wind vane"],
+    "correct_option_index": 1,
+    "explanation": "A rain gauge is used to measure the amount of rainfall at a weather station."
+  },
+  {
+    "id": "q_geo_003",
+    "subject": "Geography",
+    "syllabus_topic": "Africa",
+    "question_text": "Which of these African rivers is the longest?",
+    "options": ["Niger", "Congo", "Nile", "Zambezi"],
+    "correct_option_index": 2,
+    "explanation": "The Nile River is usually considered the longest river in Africa, flowing northwards through several countries."
+  },
+  {
+    "id": "q_geo_004",
+    "subject": "Geography",
+    "syllabus_topic": "Nigeria",
+    "question_text": "What is the capital city of Nigeria?",
+    "options": ["Lagos", "Abuja", "Kano", "Ibadan"],
+    "correct_option_index": 1,
+    "explanation": "Abuja has been the capital of Nigeria since 1991, replacing Lagos."
+  },
+  {
+    "id": "q_geo_005",
+    "subject": "Geography",
+    "syllabus_topic": "Climate",
+    "question_text": "Which climate zone is associated with very low rainfall and extreme temperatures?",
+    "options": ["Rainforest", "Desert", "Temperate", "Mediterranean"],
+    "correct_option_index": 1,
+    "explanation": "Desert climates are characterised by very low rainfall and large daily temperature ranges."
+  },
+  {
+    "id": "q_gov_001",
+    "subject": "Government",
+    "syllabus_topic": "Basic Concepts",
+    "question_text": "What is the main purpose of government in a state?",
+    "options": ["To make laws and maintain order", "To run all businesses", "To collect all money", "To choose all leaders by chance"],
+    "correct_option_index": 0,
+    "explanation": "A government makes laws, maintains order, and provides services for the well-being of its citizens."
+  },
+  {
+    "id": "q_gov_002",
+    "subject": "Government",
+    "syllabus_topic": "Types of Government",
+    "question_text": "A system of government in which power is held by a small elite is called:",
+    "options": ["Democracy", "Oligarchy", "Monarchy", "Anarchy"],
+    "correct_option_index": 1,
+    "explanation": "An oligarchy is a system in which a small group of people holds power, rather than the whole population."
+  },
+  {
+    "id": "q_gov_003",
+    "subject": "Government",
+    "syllabus_topic": "Constitution",
+    "question_text": "What is a constitution?",
+    "options": ["A type of food", "A set of fundamental rules and principles for governing a country", "A history textbook", "A foreign passport"],
+    "correct_option_index": 1,
+    "explanation": "A constitution is the supreme law of a country, setting out how the government is organised and the rights of citizens."
+  },
+  {
+    "id": "q_gov_004",
+    "subject": "Government",
+    "syllabus_topic": "Arms of Government",
+    "question_text": "Which arm of government is responsible for making laws?",
+    "options": ["The Executive", "The Legislature", "The Judiciary", "The Military"],
+    "correct_option_index": 1,
+    "explanation": "The legislature, such as Parliament, is the arm of government that makes laws."
+  },
+  {
+    "id": "q_gov_005",
+    "subject": "Government",
+    "syllabus_topic": "Democracy",
+    "question_text": "In a democracy, political power ultimately belongs to:",
+    "options": ["The king", "The armed forces", "The people", "The richest citizens"],
+    "correct_option_index": 2,
+    "explanation": "In a democracy, the people are the source of political power and exercise it through elections and participation."
+  },
+  {
+    "id": "q_lit_001",
+    "subject": "Literature-in-English",
+    "syllabus_topic": "Drama",
+    "question_text": "The climax of a play is the point at which:",
+    "options": ["The play begins", "The conflict reaches its highest point", "The curtain falls", "The audience leaves"],
+    "correct_option_index": 1,
+    "explanation": "The climax is the point of greatest tension in a story, where the main conflict reaches its peak."
+  },
+  {
+    "id": "q_lit_002",
+    "subject": "Literature-in-English",
+    "syllabus_topic": "Poetry",
+    "question_text": "What is a poem's rhyme scheme?",
+    "options": ["The number of stanzas", "The pattern of rhymes at the end of lines", "The length of each line", "The use of commas"],
+    "correct_option_index": 1,
+    "explanation": "A rhyme scheme is the pattern formed by end rhymes in a poem, often shown with letters such as ABAB."
+  },
+  {
+    "id": "q_lit_003",
+    "subject": "Literature-in-English",
+    "syllabus_topic": "Prose",
+    "question_text": "In prose fiction, a character who opposes the main character is called the:",
+    "options": ["Protagonist", "Antagonist", "Narrator", "Bystander"],
+    "correct_option_index": 1,
+    "explanation": "The antagonist is the character who opposes or challenges the protagonist in a story."
+  },
+  {
+    "id": "q_lit_004",
+    "subject": "Literature-in-English",
+    "syllabus_topic": "Literary Devices",
+    "question_text": "What is a metaphor?",
+    "options": ["A direct comparison using 'like' or 'as'", "A figure of speech that describes one thing as if it were another", "A long speech by one character", "A repeated line in a poem"],
+    "correct_option_index": 1,
+    "explanation": "A metaphor directly identifies one thing with another, for example 'time is a thief', without using 'like' or 'as'."
+  },
+  {
+    "id": "q_lit_005",
+    "subject": "Literature-in-English",
+    "syllabus_topic": "Drama",
+    "question_text": "What is the main purpose of stage directions in a play script?",
+    "options": ["To list the actors' names", "To tell actors and the director how lines and actions should be performed", "To explain the author's biography", "To count the number of scenes"],
+    "correct_option_index": 1,
+    "explanation": "Stage directions give instructions on movement, tone, setting, and action that are not spoken aloud."
+  },
+  {
+    "id": "q_fm_001",
+    "subject": "Further Mathematics",
+    "syllabus_topic": "Algebra",
+    "question_text": "If f(x) = 2x + 3, what is f(4)?",
+    "options": ["5", "8", "11", "14"],
+    "correct_option_index": 2,
+    "explanation": "Substitute x = 4 into 2x + 3 to get 2(4) + 3 = 8 + 3 = 11."
+  },
+  {
+    "id": "q_fm_002",
+    "subject": "Further Mathematics",
+    "syllabus_topic": "Matrices",
+    "question_text": "What is the order of a matrix with 3 rows and 2 columns?",
+    "options": ["2 × 3", "3 × 2", "3 + 2", "6"],
+    "correct_option_index": 1,
+    "explanation": "The order of a matrix is written as rows first, then columns, so 3 rows and 2 columns give the order 3 × 2."
+  },
+  {
+    "id": "q_fm_003",
+    "subject": "Further Mathematics",
+    "syllabus_topic": "Calculus",
+    "question_text": "What is the derivative of x^2?",
+    "options": ["x", "2", "2x", "x^2"],
+    "correct_option_index": 2,
+    "explanation": "Using the power rule, the derivative of x^2 is 2x^(2-1) = 2x."
+  },
+  {
+    "id": "q_fm_004",
+    "subject": "Further Mathematics",
+    "syllabus_topic": "Complex Numbers",
+    "question_text": "The imaginary part of the complex number 3 + 4i is:",
+    "options": ["3", "4", "4i", "3 + 4i"],
+    "correct_option_index": 1,
+    "explanation": "In a + bi, the imaginary part is b, so the imaginary part of 3 + 4i is 4."
+  },
+  {
+    "id": "q_fm_005",
+    "subject": "Further Mathematics",
+    "syllabus_topic": "Geometry",
+    "question_text": "What is the gradient of the line y = 5x - 2?",
+    "options": ["-2", "5", "2", "5x"],
+    "correct_option_index": 1,
+    "explanation": "In y = mx + c, the gradient is m, so the gradient of y = 5x - 2 is 5."
+  }
+]
