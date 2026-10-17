@@ -13,10 +13,13 @@ void main() {
   setUp(() async {
     databaseFactory = databaseFactoryFfi;
     sqfliteFfiInit();
+    // Own file: concurrent test files must not share one SQLite database.
+    DatabaseHelper.debugDatabaseFileName = 'test_saved_careers.db';
     helper = DatabaseHelper.instance;
     // Bookmarks are UNIQUE per role, so clear leftovers between tests.
     final db = await helper.database;
     await db.delete('saved_careers');
+    await db.delete('pending_career_sync');
   });
 
   tearDown(() async {
@@ -49,10 +52,20 @@ void main() {
       expect(names, contains('saved_careers'));
     });
 
-    test('the database schema version is 2', () async {
+    test('the database schema version is 3', () async {
       final db = await helper.database;
 
-      expect(await db.getVersion(), 2);
+      expect(await db.getVersion(), 3);
+    });
+
+    test('the sync queue table is created on a fresh database', () async {
+      final db = await helper.database;
+      final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table'",
+      );
+      final names = tables.map((row) => row['name'] as String).toSet();
+
+      expect(names, contains('pending_career_sync'));
     });
   });
 
@@ -111,8 +124,9 @@ void main() {
       await helper.saveSavedCareer(buildCareer(title: 'Ecologist'));
       await helper.saveSavedCareer(buildCareer(title: 'Pharmacist'));
 
-      final target = (await helper.getSavedCareers())
-          .firstWhere((c) => c.careerTitle == 'Ecologist');
+      final target = (await helper.getSavedCareers()).firstWhere(
+        (c) => c.careerTitle == 'Ecologist',
+      );
       await helper.deleteSavedCareer(target.id!);
 
       final remaining = await helper.getSavedCareers();

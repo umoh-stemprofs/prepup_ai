@@ -16,6 +16,8 @@ void main() {
   setUp(() {
     databaseFactory = databaseFactoryFfi;
     sqfliteFfiInit();
+    // Own file: concurrent test files must not share one SQLite database.
+    DatabaseHelper.debugDatabaseFileName = 'test_saved_careers_screen.db';
     helper = DatabaseHelper.instance;
   });
 
@@ -78,14 +80,8 @@ void main() {
   testWidgets('lists bookmarked roles newest first', (tester) async {
     final provider = await tester.runAsync(
       () => seed([
-        career(
-          title: 'Older Role',
-          savedAt: DateTime(2026, 10, 1),
-        ),
-        career(
-          title: 'Newest Role',
-          savedAt: DateTime(2026, 10, 16),
-        ),
+        career(title: 'Older Role', savedAt: DateTime(2026, 10, 1)),
+        career(title: 'Newest Role', savedAt: DateTime(2026, 10, 16)),
       ]),
     );
 
@@ -134,20 +130,23 @@ void main() {
     await tester.pump();
 
     await tester.drag(find.text('Pharmacist'), const Offset(-600, 0));
-    await tester.pump();
+    // Run the dismiss animation to completion: onDismissed only fires after it.
+    await tester.pumpAndSettle();
 
     // Let the real sqflite delete finish while the tree is still mounted.
     await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 200)),
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
     );
     await tester.pump();
 
     expect(find.text('Pharmacist'), findsNothing);
     expect(find.text('Ecologist'), findsOneWidget);
 
-    final stored = await tester.runAsync(
-      () => helper.getSavedCareers(),
-    );
+    final stored = await tester.runAsync(() => helper.getSavedCareers());
     expect(stored!.map((c) => c.careerTitle), ['Ecologist']);
+
+    // Let the "Removed Pharmacist" snackbar timer expire so no timer is left
+    // pending when the test ends.
+    await tester.pump(const Duration(seconds: 5));
   });
 }

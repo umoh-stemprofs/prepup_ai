@@ -16,6 +16,8 @@ void main() {
   setUp(() {
     databaseFactory = databaseFactoryFfi;
     sqfliteFfiInit();
+    // Own file: concurrent test files must not share one SQLite database.
+    DatabaseHelper.debugDatabaseFileName = 'test_database_helper.db';
     helper = DatabaseHelper.instance;
   });
 
@@ -42,19 +44,20 @@ void main() {
     );
   });
 
-  test('seedQuestionsFromAssetsIfEmpty loads all 60 seed questions once',
-      () async {
-    // First seed call.
-    await helper.seedQuestionsFromAssetsIfEmpty();
-    expect(await helper.getQuestionCount(), equals(60));
+  test(
+    'seedQuestionsFromAssetsIfEmpty loads all 60 seed questions once',
+    () async {
+      // First seed call.
+      await helper.seedQuestionsFromAssetsIfEmpty();
+      expect(await helper.getQuestionCount(), equals(60));
 
-    // Second call should be a no-op.
-    await helper.seedQuestionsFromAssetsIfEmpty();
-    expect(await helper.getQuestionCount(), equals(60));
-  });
+      // Second call should be a no-op.
+      await helper.seedQuestionsFromAssetsIfEmpty();
+      expect(await helper.getQuestionCount(), equals(60));
+    },
+  );
 
-  test('seed populates every subject from AppConstants.subjects',
-      () async {
+  test('seed populates every subject from AppConstants.subjects', () async {
     await helper.seedQuestionsFromAssetsIfEmpty();
 
     final db = await helper.database;
@@ -62,13 +65,15 @@ void main() {
       'SELECT subject, COUNT(*) AS c FROM local_questions GROUP BY subject',
     );
     final counts = {
-      for (final row in rows)
-        row['subject'] as String: (row['c'] as int?) ?? 0
+      for (final row in rows) row['subject'] as String: (row['c'] as int?) ?? 0,
     };
 
     for (final subject in AppConstants.subjects) {
-      expect(counts.containsKey(subject), isTrue,
-          reason: 'Missing subject in seed: $subject');
+      expect(
+        counts.containsKey(subject),
+        isTrue,
+        reason: 'Missing subject in seed: $subject',
+      );
     }
 
     expect(
@@ -83,39 +88,46 @@ void main() {
     );
   });
 
-  test('getQuestionsBySubject returns random questions for a subject',
-      () async {
-    await helper.seedQuestionsFromAssetsIfEmpty();
+  test(
+    'getQuestionsBySubject returns random questions for a subject',
+    () async {
+      await helper.seedQuestionsFromAssetsIfEmpty();
 
-    final service = QuestionsLocalService(helper);
-    final questions = await service.getQuestionsBySubject(
-      AppConstants.mathematics,
-      limit: 3,
-    );
+      final service = QuestionsLocalService(helper);
+      final questions = await service.getQuestionsBySubject(
+        AppConstants.mathematics,
+        limit: 3,
+      );
 
-    expect(questions.length, lessThanOrEqualTo(3));
-    for (final question in questions) {
-      expect(question['subject'], equals(AppConstants.mathematics));
-      expect(question['options'], isA<List<String>>());
-      expect(question['options'].length, equals(4));
-      expect(question['correct_option_index'], anyOf([0, 1, 2, 3]));
-      expect(question['explanation'], isA<String>());
-      expect((question['explanation'] as String).isNotEmpty, isTrue);
-    }
-  });
+      expect(questions.length, lessThanOrEqualTo(3));
+      for (final question in questions) {
+        expect(question['subject'], equals(AppConstants.mathematics));
+        expect(question['options'], isA<List<String>>());
+        expect(question['options'].length, equals(4));
+        expect(question['correct_option_index'], anyOf([0, 1, 2, 3]));
+        expect(question['explanation'], isA<String>());
+        expect((question['explanation'] as String).isNotEmpty, isTrue);
+      }
+    },
+  );
 
-  test('getAllSubjectsQuestionCounts returns counts for all subjects',
-      () async {
-    await helper.seedQuestionsFromAssetsIfEmpty();
+  test(
+    'getAllSubjectsQuestionCounts returns counts for all subjects',
+    () async {
+      await helper.seedQuestionsFromAssetsIfEmpty();
 
-    final service = QuestionsLocalService(helper);
-    final counts = await service.getAllSubjectsQuestionCounts();
+      final service = QuestionsLocalService(helper);
+      final counts = await service.getAllSubjectsQuestionCounts();
 
-    for (final subject in AppConstants.subjects) {
-      expect(counts.containsKey(subject), isTrue,
-          reason: 'Expected counts for subject: $subject');
-    }
-    expect(counts[AppConstants.mathematics], equals(10));
-    expect(counts[AppConstants.englishLanguage], equals(10));
-  });
+      for (final subject in AppConstants.subjects) {
+        expect(
+          counts.containsKey(subject),
+          isTrue,
+          reason: 'Expected counts for subject: $subject',
+        );
+      }
+      expect(counts[AppConstants.mathematics], equals(10));
+      expect(counts[AppConstants.englishLanguage], equals(10));
+    },
+  );
 }

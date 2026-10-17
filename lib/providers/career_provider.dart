@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
 
 import '../data/local/database_helper.dart';
+import '../data/remote/career_sync_service.dart';
 import '../models/saved_career.dart';
 
 /// Manages the STEM career helper flow: selection state, deterministic
 /// matching, and the locally persisted bookmarks.
 class CareerProvider extends ChangeNotifier {
-  CareerProvider({DatabaseHelper? databaseHelper})
-      : _databaseHelper = databaseHelper ?? DatabaseHelper.instance;
+  CareerProvider({
+    DatabaseHelper? databaseHelper,
+    CareerSyncService? syncService,
+  }) : _databaseHelper = databaseHelper ?? DatabaseHelper.instance {
+    _syncService = syncService ??
+        CareerSyncService(databaseHelper: _databaseHelper);
+  }
 
   final DatabaseHelper _databaseHelper;
+  late final CareerSyncService _syncService;
 
   WorkEnvironment _workEnvironment = WorkEnvironment.indoor;
   ActivityPreference _activityPreference = ActivityPreference.building;
   Set<String> _favoriteSubjects = {}; // max 1
 
   WorkEnvironment get workEnvironment => _workEnvironment;
-  ActivityPreference get activityPreference => _activityPreference;  Set<String> get favoriteSubjects => Set<String>.unmodifiable(_favoriteSubjects);
+  ActivityPreference get activityPreference => _activityPreference;
+  Set<String> get favoriteSubjects => Set<String>.unmodifiable(_favoriteSubjects);
 
   bool get hasSelection => _favoriteSubjects.isNotEmpty;
 
@@ -34,16 +42,31 @@ class CareerProvider extends ChangeNotifier {
   /// Whether the bookmarks have been read from disk yet.
   bool get savedCareersLoaded => _savedCareersLoaded;
 
+  int _pendingSyncCount = 0;
+  bool _isSyncing = false;
+  String? _lastSyncError;
+
+  /// Cloud writes still waiting to be flushed.
+  int get pendingSyncCount => _pendingSyncCount;
+
+  /// True while a flush is in flight.
+  bool get isSyncing => _isSyncing;
+
+  /// Last remote failure, or null when the queue is healthy.
+  String? get lastSyncError => _lastSyncError;
+
   /// Loads bookmarks from the offline cache.
   Future<void> loadSavedCareers() async {
     _savedCareers = await _databaseHelper.getSavedCareers();
+    _pendingSyncCount = await _syncService.pendingCount();
     _savedCareersLoaded = true;
     notifyListeners();
   }
 
-  /// Persists the current [match] and refreshes [savedCareers].
+  /// Persists the current [match] locally, then tries to push it to the cloud.
   ///
-  /// Re-saving the same role updates its row rather than duplicating it.
+  /// The local write always succeeds first; the cloud write is queued and
+  /// flushed best-effort, so being offline only delays the sync.
   Future<SavedCareer> saveCurrentMatch() async {
     final current = match();
     final saved = SavedCareer(
@@ -55,14 +78,56 @@ class CareerProvider extends ChangeNotifier {
     );
 
     await _databaseHelper.saveSavedCareer(saved);
+    await _syncService.queueUpsert(saved);
     await loadSavedCareers();
+    await flushPendingSync();
     return saved;
   }
 
-  /// Removes a bookmark by its row id.
+  /// Removes a bookmark locally, then queues the cloud delete.
   Future<void> removeSavedCareer(int id) async {
+    SavedCareer? removed;
+    for (final career in _savedCareers) {
+      if (career.id == id) {
+        removed = career;
+        break;
+      }
+    }
+
     await _databaseHelper.deleteSavedCareer(id);
+    if (removed != null) {
+      await _syncService.queueDelete(removed.careerTitle);
+    }
     await loadSavedCareers();
+    await flushPendingSync();
+  }
+
+  /// Pushes queued cloud writes, if a session exists and the device is online.
+  ///
+  /// Never throws: offline or signed-out states simply leave the queue intact.
+  Future<CareerSyncReport> flushPendingSync() async {
+    if (_isSyncing) {
+      return CareerSyncReport(pending: _pendingSyncCount);
+    }
+
+    _isSyncing = true;
+    notifyListeners();
+    try {
+      final report = await _syncService.flush();
+      _pendingSyncCount = report.pending;
+      _lastSyncError = report.error;
+      return report;
+    } catch (error) {
+      // Includes local queue read failures: surface, never crash the UI.
+      _lastSyncError = error.toString();
+      return CareerSyncReport(
+        pending: _pendingSyncCount,
+        error: _lastSyncError,
+      );
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
+    }
   }
 
   /// Best match based on the current selections.

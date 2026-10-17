@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
+import '../../models/pending_career_sync.dart';
 import '../../models/quiz_session.dart';
 import '../../models/saved_career.dart';
 import '../../models/weak_area.dart';
@@ -20,6 +21,14 @@ class DatabaseHelper {
 
   /// The canonical asset path for the question SSOT.
   static const _questionsAssetPath = 'assets/questions.json';
+
+  /// Overrides the on-disk database filename.
+  ///
+  /// `flutter test` runs test files concurrently, and every file that opens
+  /// this helper would otherwise share one SQLite file, which surfaces as
+  /// `SqliteException(5): database is locked`. Each test file sets a unique
+  /// name here so parallel suites never contend for the same file.
+  static String? debugDatabaseFileName;
 
   static DatabaseHelper get instance {
     _instance ??= DatabaseHelper._();
@@ -47,7 +56,10 @@ class DatabaseHelper {
   /// Opens the SQLite database, creating the offline schema on first launch.
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
-    final path = p.join(dbPath, 'prepup_ai_local.db');
+    final path = p.join(
+      dbPath,
+      debugDatabaseFileName ?? 'prepup_ai_local.db',
+    );
 
     return openDatabase(
       path,
@@ -61,12 +73,15 @@ class DatabaseHelper {
   /// Current offline schema version.
   ///
   /// v1 introduced the question/session/weak-area cache; v2 added saved
-  /// career bookmarks.
-  static const int _schemaVersion = 2;
+  /// career bookmarks; v3 added the career sync queue.
+  static const int _schemaVersion = 3;
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await _createSavedCareersTable(db);
+    }
+    if (oldVersion < 3) {
+      await _createPendingCareerSyncTable(db);
     }
   }
 
@@ -122,6 +137,7 @@ class DatabaseHelper {
     ''');
 
     await _createSavedCareersTable(db);
+    await _createPendingCareerSyncTable(db);
   }
 
   /// Saved career bookmarks (schema v2).
@@ -254,6 +270,60 @@ class DatabaseHelper {
   Future<void> deleteSavedCareer(int id) async {
     final db = await database;
     await db.delete('saved_careers', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Queued cloud writes for bookmarks (schema v3).
+  ///
+  /// `career_title` is the primary key so queuing the same role again replaces
+  /// the earlier operation, coalescing save/delete churn into one write.
+  Future<void> _createPendingCareerSyncTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE pending_career_sync (
+        career_title TEXT PRIMARY KEY,
+        operation TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        queued_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  /// Queues a cloud write, replacing any pending operation for the same role.
+  Future<void> queueCareerSync(PendingCareerSync operation) async {
+    final db = await database;
+    await db.insert(
+      'pending_career_sync',
+      operation.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Returns queued cloud writes, oldest first.
+  Future<List<PendingCareerSync>> getPendingCareerSync() async {
+    final db = await database;
+    final rows = await db.query(
+      'pending_career_sync',
+      orderBy: 'queued_at ASC',
+    );
+    return rows.map((row) => PendingCareerSync.fromMap(row)).toList();
+  }
+
+  /// Removes one queued operation once the cloud has accepted it.
+  Future<void> clearPendingCareerSync(String careerTitle) async {
+    final db = await database;
+    await db.delete(
+      'pending_career_sync',
+      where: 'career_title = ?',
+      whereArgs: [careerTitle],
+    );
+  }
+
+  /// Number of cloud writes still waiting to be flushed.
+  Future<int> pendingCareerSyncCount() async {
+    final db = await database;
+    final row = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM pending_career_sync',
+    );
+    return (row.first['c'] as int?) ?? 0;
   }
 
   /// Aggregates weak-area rows into per-syllabus-topic summaries.
