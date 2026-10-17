@@ -30,7 +30,22 @@ class WeakArea {
       totalCount == 0 ? 0 : (correctCount / totalCount) * 100;
 
   /// True when accuracy is below the 50% pass mark.
+  ///
+  /// This is the exam-level pass mark and is intentionally distinct from the
+  /// analytics badges below, which use a higher 70% targets bar.
   bool get isBelowPassMark => accuracyPercentage < 50;
+
+  /// Share of attempts in this topic that were answered incorrectly, 0-1.
+  double get incorrectRatio =>
+      totalCount == 0 ? 0 : incorrectCount / totalCount;
+
+  /// The analytics-screen threshold: more than 30% wrong means the topic
+  /// renders with a red `NEEDS PRACTICE` badge.
+  bool get isNeedsPractice => incorrectRatio > 0.30;
+
+  /// The analytics-screen counterpart to [isNeedsPractice]: at least 70%
+  /// correct renders with a green `GOOD` badge.
+  bool get isGood => !isNeedsPractice;
 
   // ---------------------------------------------------------------------------
   // Serialization

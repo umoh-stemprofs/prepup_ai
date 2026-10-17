@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme.dart';
 import '../../providers/quiz_provider.dart';
-import 'results_screen.dart';
+import 'answer_review_screen.dart';
 
 class ExamScreen extends StatelessWidget {
   const ExamScreen({super.key});
@@ -550,9 +550,11 @@ class _NavigationBar extends StatelessWidget {
                   navigator.pop();
                   await quiz.finishQuiz();
                   if (!navigator.mounted) return;
+                  // The review screen owns its own "Back to Results" action,
+                  // so the exam route is simply replaced by it.
                   navigator.pushReplacement(
                     MaterialPageRoute(
-                      builder: (_) => const ResultsScreen(),
+                      builder: (_) => const AnswerReviewScreen(),
                     ),
                   );
                 },

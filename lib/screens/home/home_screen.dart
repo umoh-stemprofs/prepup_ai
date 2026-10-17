@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants.dart';
 import '../../providers/auth_provider.dart';
+import '../analytics/weak_areas_screen.dart';
+import '../career/career_helper_screen.dart';
+import '../career/saved_careers_screen.dart';
 import '../quiz/exam_setup_screen.dart';
 
 /// Shared dashboard / home destination for both guests and signed-in users.
@@ -72,6 +75,42 @@ class HomeScreen extends StatelessWidget {
                   );
                 },
                 child: const Text('Start Practising'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const WeakAreasScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.trending_up),
+                label: const Text('My Weak Areas'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const CareerHelperScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.explore_outlined),
+                label: const Text('STEM Career Helper'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SavedCareersScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.bookmark_border),
+                label: const Text('Saved Careers'),
               ),
               const SizedBox(height: 16),
             ],

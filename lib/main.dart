@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'core/constants.dart';
 import 'core/theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/career_provider.dart';
 import 'providers/quiz_provider.dart';
 import 'screens/home/home_screen.dart';
 
@@ -27,6 +28,9 @@ class PrepUpApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<QuizProvider>(
           create: (_) => QuizProvider(),
+        ),
+        ChangeNotifierProvider<CareerProvider>(
+          create: (_) => CareerProvider(),
         ),
       ],
       child: MaterialApp(

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../providers/quiz_provider.dart';
 import '../home/home_screen.dart';
+import 'answer_review_screen.dart';
 
 class ResultsScreen extends StatelessWidget {
   const ResultsScreen({super.key});
@@ -109,10 +110,9 @@ class ResultsScreen extends StatelessWidget {
                 height: AppDimensions.buttonHeight,
                 child: FilledButton(
                   onPressed: () {
-                    // Navigate to answer review (placeholder for now).
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Answer review coming in a later phase.'),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AnswerReviewScreen(),
                       ),
                     );
                   },

@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
 import '../../models/quiz_session.dart';
+import '../../models/saved_career.dart';
 import '../../models/weak_area.dart';
 
 /// Singleton SQLite helper for the local offline cache.
@@ -50,10 +51,23 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 1,
+      version: _schemaVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
     );
+  }
+
+  /// Current offline schema version.
+  ///
+  /// v1 introduced the question/session/weak-area cache; v2 added saved
+  /// career bookmarks.
+  static const int _schemaVersion = 2;
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createSavedCareersTable(db);
+    }
   }
 
   Future<void> _onConfigure(Database db) async {
@@ -104,6 +118,25 @@ class DatabaseHelper {
         session_uuid TEXT PRIMARY KEY,
         payload TEXT NOT NULL,
         created_at TEXT NOT NULL
+      )
+    ''');
+
+    await _createSavedCareersTable(db);
+  }
+
+  /// Saved career bookmarks (schema v2).
+  ///
+  /// [career_title] is UNIQUE so re-saving the same role refreshes the row
+  /// instead of piling up duplicates.
+  Future<void> _createSavedCareersTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE saved_careers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        career_title TEXT NOT NULL UNIQUE,
+        summary TEXT NOT NULL,
+        required_subjects TEXT NOT NULL,
+        match_percentage INTEGER NOT NULL,
+        saved_at TEXT NOT NULL
       )
     ''');
   }
@@ -184,5 +217,63 @@ class DatabaseHelper {
       });
     }
     await batch.commit(noResult: true);
+  }
+
+  /// Returns all recorded weak-area rows, most recent first.
+  Future<List<WeakArea>> getWeakAreas() async {
+    final db = await database;
+    final rows = await db.query(
+      'local_weak_areas',
+      orderBy: 'id DESC',
+    );
+    return rows.map((row) => WeakArea.fromMap(row)).toList();
+  }
+
+  /// Persists a bookmarked career, replacing any earlier bookmark for the
+  /// same role so a re-save just refreshes its score and timestamp.
+  Future<void> saveSavedCareer(SavedCareer career) async {
+    final db = await database;
+    await db.insert(
+      'saved_careers',
+      career.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Returns bookmarked careers, newest first.
+  Future<List<SavedCareer>> getSavedCareers() async {
+    final db = await database;
+    final rows = await db.query(
+      'saved_careers',
+      orderBy: 'saved_at DESC',
+    );
+    return rows.map((row) => SavedCareer.fromMap(row)).toList();
+  }
+
+  /// Removes a bookmark by its row id.
+  Future<void> deleteSavedCareer(int id) async {
+    final db = await database;
+    await db.delete('saved_careers', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Aggregates weak-area rows into per-syllabus-topic summaries.
+  ///
+  /// Groups by [syllabus_topic] and sums incorrect/total counts so the UI can
+  /// categorize each topic without showing every raw session row.
+  Future<List<WeakArea>> getAggregatedWeakAreas() async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT
+        subject,
+        syllabus_topic,
+        SUM(incorrect_count) AS incorrect_count,
+        SUM(total_count) AS total_count
+      FROM local_weak_areas
+      GROUP BY subject, syllabus_topic
+      ORDER BY
+        CAST(SUM(incorrect_count) AS REAL) /
+          NULLIF(SUM(total_count), 0) DESC
+    ''');
+    return rows.map((row) => WeakArea.fromMap(row)).toList();
   }
 }
