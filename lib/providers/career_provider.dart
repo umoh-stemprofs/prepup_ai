@@ -292,6 +292,13 @@ class CareerProvider extends ChangeNotifier {
     _favoriteSubjects = {};
     notifyListeners();
   }
+
+  /// Sets the pending-sync badge count, for testability of the dashboard
+  /// banner without touching the database.
+  void setPendingSyncCount(int count) {
+    _pendingSyncCount = count;
+    notifyListeners();
+  }
 }
 
 enum WorkEnvironment { indoor, outdoor }

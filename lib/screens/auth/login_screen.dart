@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../providers/auth_provider.dart';
-import '../home/home_screen.dart';
+import '../dashboard/main_shell.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -47,9 +47,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (mounted) {
         if (provider.isAuthenticated) {
-          await Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
+          // Unwind the auth stack back to the shell's Profile tab.
+          final navigator = Navigator.of(context);
+          if (navigator.canPop()) {
+            navigator.pop();
+          } else {
+            navigator.pushReplacement(
+              MaterialPageRoute(builder: (_) => const MainShell()),
+            );
+          }
         } else if (!provider.isAuthenticating && provider.state == AuthState.error) {
           // Error state is shown by the banner below; keep the user on this
           // screen so they can retry.
@@ -73,9 +79,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _continueAsGuest() {
     context.read<AuthProvider>().continueAsGuest();
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-    );
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainShell()),
+      );
+    }
   }
 
   void _showPasswordToggle() {
@@ -93,8 +104,16 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      tooltip: 'Back',
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () => Navigator.of(context).maybePop(),
+                    ),
+                  ),
                   const SizedBox(height: 40),
-                  const _AppLogo(),
+                  appLogoPage(),
                   const SizedBox(height: 24),
                   Text(
                     AppConstants.appName,
@@ -261,40 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class _AppLogo extends StatelessWidget {
-  const _AppLogo();
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 96,
-      height: 96,
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 12,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Image.asset(
-          'assets/logo.png',
-          fit: BoxFit.cover,
-          errorBuilder: (error, context, child) => const Icon(
-            Icons.school_outlined,
-            size: 46,
-            color: AppColors.primary,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _InputField extends StatefulWidget {
   final String label;

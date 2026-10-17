@@ -13,6 +13,7 @@ class QuestionsLocalService {
 
   /// Returns up to [limit] random questions for [subject] from the local cache.
   ///
+  /// Pass [AppConstants.allSubjects] to draw a mixed set across every subject.
   /// The call goes through the asset SSOT seed, so it only returns questions
   /// that were present in `assets/questions.json`.
   Future<List<Map<String, dynamic>>> getQuestionsBySubject(
@@ -20,10 +21,11 @@ class QuestionsLocalService {
     int limit = 10,
   }) async {
     final db = await _databaseHelper.database;
+    final bool allSubjects = subject == AppConstants.allSubjects;
     final rows = await db.query(
       'local_questions',
-      where: 'subject = ?',
-      whereArgs: [subject],
+      where: allSubjects ? null : 'subject = ?',
+      whereArgs: allSubjects ? null : [subject],
       orderBy: 'RANDOM()',
       limit: limit,
     );

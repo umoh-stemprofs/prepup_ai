@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme.dart';
 import '../../providers/auth_provider.dart';
-import '../home/home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -48,10 +47,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (mounted) {
         if (provider.isAuthenticated) {
-          await Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-            (_) => false,
-          );
+          // Unwind login + register back to the app shell.
+          Navigator.of(context).popUntil((route) => route.isFirst);
         } else if (provider.state == AuthState.error) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -100,6 +97,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const SizedBox(height: 8),
+                  appLogoPage(),
+                  const SizedBox(height: 24),
                   Text(
                     'Fill in your details to start',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(

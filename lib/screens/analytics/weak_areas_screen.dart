@@ -54,6 +54,8 @@ class _WeakAreasScreenState extends State<WeakAreasScreen> {
       subject: topic.subject,
       questionCount: 10,
       syllabusTopic: topic.syllabusTopic,
+      // Red-topic drills are practice, not exam conditions.
+      mode: QuizMode.practice,
     );
     if (!mounted) return;
     setState(() => _starting = false);
@@ -128,9 +130,16 @@ class _WeakAreasScreenState extends State<WeakAreasScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: _PracticeBar(
-        isBusy: _starting,
-        onPressed: _loading || _topics.isEmpty ? null : _practiceRedTopics,
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _PracticeBar(
+            isBusy: _starting,
+            onPressed: _loading || _topics.isEmpty ? null : _practiceRedTopics,
+          ),
+          const SizedBox(height: 8),
+          bottomNavBar(currentIndex: 1),
+        ],
       ),
     );
   }

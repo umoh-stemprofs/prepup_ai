@@ -63,14 +63,149 @@ class AppColors {
   /// Surfaces and text.
   static const Color surface = Color(0xFFF8F9FA);
   static const Color surfaceContainerLow = Color(0xFFF3F4F5);
-  static const Color surfaceHigh = Color(0xFFE7E8E9);
+  static const Color surfaceContainerLowest = Color(0xFFFFFFFF);
+  static const Color surfaceContainerHigh = Color(0xFFE7E8E9);
+  static const Color surfaceContainerHighest = Color(0xFFE1E3E4);
   static const Color surfaceVariant = Color(0xFFE1E3E4);
   static const Color onSurface = Color(0xFF191C1D);
   static const Color onSurfaceVariant = Color(0xFF434655);
   static const Color outline = Color(0xFF737686);
+
+  /// Secondary on-color (white) for green buttons.
+  static const Color onSecondary = Color(0xFFFFFFFF);
+
+  /// On-primary — white text on the primary blue.
+  static const Color onPrimary = Color(0xFFFFFFFF);
+
+  /// On-primary-fixed — dark text on the primary-fixed light blue.
+  static const Color onPrimaryFixedVariant = Color(0xFF003EA8);
+}
+
+// ---------------------------------------------------------------------------
+// Shared bottom navigation bar for pushed screens.
+// ---------------------------------------------------------------------------
+
+/// The four bottom nav destinations used by [MainShell] and standalone
+/// pushed screens.
+const List<NavigationDestination> _bottomNavDestinations = [
+  NavigationDestination(
+    icon: Icon(Icons.home_outlined),
+    selectedIcon: Icon(Icons.home, color: AppColors.primary),
+    label: 'Home',
+  ),
+  NavigationDestination(
+    icon: Icon(Icons.school_outlined),
+    selectedIcon: Icon(Icons.school),
+    label: 'Practice',
+  ),
+  NavigationDestination(
+    icon: Icon(Icons.psychology_outlined),
+    selectedIcon: Icon(Icons.psychology),
+    label: 'AI Career',
+  ),
+  NavigationDestination(
+    icon: Icon(Icons.person_outline),
+    selectedIcon: Icon(Icons.person),
+    label: 'Profile',
+  ),
+];
+
+/// Standalone bottom navigation bar for use on pushed screens.
+///
+/// Use this on screens that are pushed on top of the shell but still
+/// want the bottom nav visible (e.g. career helper, saved careers).
+/// Pass [currentIndex] to highlight the active tab.
+Widget bottomNavBar({int currentIndex = 0}) {
+  return Container(
+    decoration: BoxDecoration(
+      color: AppColors.surfaceContainerLowest,
+      border: Border(
+        top: BorderSide(
+          color: AppColors.surfaceContainerHigh,
+          width: 1,
+        ),
+      ),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+      child: NavigationBar(
+        selectedIndex: currentIndex,
+        onDestinationSelected: (_) {},
+        indicatorColor: Colors.transparent,
+        backgroundColor: Colors.transparent,
+        destinations: _bottomNavDestinations,
+      ),
+    ),
+  );
 }
 
 /// Shared dimensions.
+// ---------------------------------------------------------------------------
+// Shared app logo — used on login, register, and dashboard header.
+// ---------------------------------------------------------------------------
+
+/// Returns a logo image widget sized for the dashboard sticky header (36×36).
+Widget appLogoDashboardHeader() {
+  return Container(
+    width: 36,
+    height: 36,
+    decoration: BoxDecoration(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(8),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x1a000000),
+          blurRadius: 6,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: Image.asset(
+        'assets/logo.png',
+        fit: BoxFit.cover,
+        errorBuilder: (error, context, child) => const Icon(
+          Icons.school_outlined,
+          size: 22,
+          color: AppColors.primary,
+        ),
+      ),
+    ),
+  );
+}
+
+/// Returns a logo image widget sized for the login/register page (96×96).
+Widget appLogoPage() {
+  return Container(
+    width: 96,
+    height: 96,
+    decoration: BoxDecoration(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(22),
+      boxShadow: const [
+        BoxShadow(
+          color: Colors.black12,
+          blurRadius: 12,
+          offset: Offset(0, 6),
+        ),
+      ],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: Image.asset(
+        'assets/logo.png',
+        fit: BoxFit.cover,
+        errorBuilder: (error, context, child) => const Icon(
+          Icons.school_outlined,
+          size: 46,
+          color: AppColors.primary,
+        ),
+      ),
+    ),
+  );
+}
+
 class AppDimensions {
   AppDimensions._();
 

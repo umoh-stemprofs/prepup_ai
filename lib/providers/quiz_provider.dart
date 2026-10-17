@@ -10,6 +10,16 @@ import '../models/question.dart';
 import '../models/quiz_session.dart';
 import '../models/weak_area.dart';
 
+/// How a quiz is timed (Phase 08, task 9.2).
+enum QuizMode {
+  /// Real exam conditions: a wall-clock countdown that never pauses and
+  /// auto-submits when it reaches zero.
+  timed,
+
+  /// Untimed drilling: no countdown, the student submits manually when ready.
+  practice,
+}
+
 /// Manages a single CBT practice quiz: question fetch, option shuffling,
 /// answer capture, countdown timer, scoring, and local persistence.
 ///
@@ -20,8 +30,10 @@ class QuizProvider extends ChangeNotifier {
     DatabaseHelper? databaseHelper,
     QuestionsLocalService? questionsLocalService,
     String? Function()? userIdProvider,
+    DateTime Function()? now,
   }) : _databaseHelper = databaseHelper ?? DatabaseHelper.instance,
-       _userIdProvider = userIdProvider {
+       _userIdProvider = userIdProvider,
+       _now = now ?? DateTime.now {
     _questionsLocalService =
         questionsLocalService ?? QuestionsLocalService(_databaseHelper);
   }
@@ -32,6 +44,10 @@ class QuizProvider extends ChangeNotifier {
   /// Resolves the signed-in account, so a finished attempt is queued for the
   /// student who actually practised. Null means guest: local history only.
   final String? Function()? _userIdProvider;
+
+  /// Clock source, injectable so tests can drive the wall-clock deadline
+  /// without real waiting.
+  final DateTime Function() _now;
 
   // ---------------------------------------------------------------------------
   // Public state
@@ -53,8 +69,42 @@ class QuizProvider extends ChangeNotifier {
   int _remainingSeconds = 0;
   int get remainingSeconds => _remainingSeconds;
 
+  /// Full length of the attempt in seconds (15 or 30 minutes).
+  int get originalDurationSeconds => _originalDurationSeconds;
+
+  /// Seconds elapsed since the attempt started — what the practice badge
+  /// shows, since untimed drills count up instead of down.
+  int get elapsedSeconds {
+    final startedAt = _startedAt;
+    if (startedAt == null) return 0;
+    final elapsed = _now().difference(startedAt).inSeconds;
+    return elapsed < 0 ? 0 : elapsed;
+  }
+
+  QuizMode _mode = QuizMode.timed;
+  QuizMode get mode => _mode;
+
+  /// Wall-clock instant the exam ends (Phase 08, D7).
+  ///
+  /// Fixed once [startQuiz] is called. [remainingSeconds] is always derived
+  /// from this rather than a counter, so backgrounding the app or navigating
+  /// away cannot pause or drift the clock.
+  DateTime? _examEndsAt;
+  DateTime? get examEndsAt => _examEndsAt;
+
   bool _isCompleted = false;
   bool get isCompleted => _isCompleted;
+
+  /// True when the last completion came from the deadline (timer or resume),
+  /// not a manual submit.
+  ///
+  /// The exam screen uses this to decide whether it should navigate itself to
+  /// the results screen (auto-submit) or leave navigation to the submit dialog.
+  bool _autoSubmitted = false;
+  bool get autoSubmitted => _autoSubmitted;
+
+  /// When the current attempt started, for practice-mode elapsed time.
+  DateTime? _startedAt;
 
   QuizSession? _lastSession;
   QuizSession? get lastSession => _lastSession;
@@ -108,20 +158,35 @@ class QuizProvider extends ChangeNotifier {
   /// finds no cached questions returns an empty quiz rather than silently
   /// widening back to the subject.
   ///
+  /// [mode] decides timing: [QuizMode.timed] sets a wall-clock deadline that
+  /// auto-submits, [QuizMode.practice] has no deadline and relies on a manual
+  /// submit. Both produce the same scoring and analytics.
+  ///
   /// Fetches questions from the local cache, shuffles options independently
-  /// for each question, and starts a countdown timer. The timer auto-finishes
-  /// the quiz when it reaches zero.
+  /// for each question.
   Future<void> startQuiz({
     required String subject,
     required int questionCount,
     String? syllabusTopic,
+    QuizMode mode = QuizMode.timed,
   }) async {
     _resetState();
+    _mode = mode;
+    _startedAt = _now();
 
     // Duration: 15 minutes for 10 questions, 30 minutes for 20 questions.
     final durationMinutes = questionCount <= 10 ? 15 : 30;
     _originalDurationSeconds = durationMinutes * 60;
-    _remainingSeconds = _originalDurationSeconds;
+
+    if (_mode == QuizMode.timed) {
+      // D7: the deadline is a fixed instant, never a countdown counter.
+      _examEndsAt = _now().add(Duration(seconds: _originalDurationSeconds));
+      _remainingSeconds = _originalDurationSeconds;
+    } else {
+      // Practice mode is untimed; the badge shows elapsed time instead.
+      _examEndsAt = null;
+      _remainingSeconds = _originalDurationSeconds;
+    }
 
     // Fetch questions from the local cache, narrowed to one sub-topic when
     // the caller asked for one.
@@ -214,15 +279,67 @@ class QuizProvider extends ChangeNotifier {
 
   void _startCountdownTimer() {
     _countdownTimer?.cancel();
+    // Practice mode has no deadline (9.2); it only ticks so the elapsed-time
+    // badge updates once a second, and never auto-submits.
+    if (_mode == QuizMode.practice) {
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        notifyListeners();
+      });
+      return;
+    }
+
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _syncRemainingFromClock();
       if (_remainingSeconds <= 0) {
         _countdownTimer?.cancel();
+        _autoSubmitted = true;
         finishQuiz();
         return;
       }
-      _remainingSeconds--;
       notifyListeners();
     });
+  }
+
+  /// Recomputes [remainingSeconds] from the wall-clock deadline (D7).
+  ///
+  /// Called on every tick and on every app resume, so the clock keeps running
+  /// while backgrounded. Returns true when the deadline has passed.
+  bool _syncRemainingFromClock() {
+    final endsAt = _examEndsAt;
+    if (endsAt == null) return false;
+
+    final remaining = endsAt.difference(_now()).inSeconds;
+    _remainingSeconds = remaining > 0 ? remaining : 0;
+    return remaining <= 0;
+  }
+
+  /// Re-derives the remaining time and auto-submits if the deadline passed
+  /// while the app was backgrounded or the screen was closed.
+  ///
+  /// Wired to `WidgetsBindingObserver.didChangeAppLifecycleState(resumed)` on
+  /// the exam screen. A practice-mode quiz is unaffected.
+  void handleAppResume() {
+    if (_isCompleted) return;
+    if (_mode == QuizMode.practice) {
+      notifyListeners();
+      return;
+    }
+    if (_syncRemainingFromClock()) {
+      _countdownTimer?.cancel();
+      _autoSubmitted = true;
+      finishQuiz();
+    } else {
+      notifyListeners();
+    }
+  }
+
+  /// Abandons the in-progress attempt without scoring or persisting it (8.6).
+  ///
+  /// The timer is cancelled and every trace of the attempt is dropped, so a
+  /// quit can never show up in history or the sync queue.
+  void quitAttempt() {
+    _resetState();
+    notifyListeners();
   }
 
   void _cancelCountdownTimer() {
@@ -292,6 +409,10 @@ class QuizProvider extends ChangeNotifier {
   }
 
   int get _timeSpentSeconds {
+    // Untimed drills report wall-clock time spent, not the unused countdown.
+    if (_mode == QuizMode.practice) {
+      return elapsedSeconds;
+    }
     if (_isCompleted) {
       return _originalDurationSeconds - _frozenRemainingAtCompletion;
     }
@@ -311,6 +432,10 @@ class QuizProvider extends ChangeNotifier {
     _currentIndex = 0;
     _userAnswers.clear();
     _remainingSeconds = 0;
+    _mode = QuizMode.timed;
+    _examEndsAt = null;
+    _startedAt = null;
+    _autoSubmitted = false;
     _isCompleted = false;
     _lastSession = null;
     _originalDurationSeconds = 0;

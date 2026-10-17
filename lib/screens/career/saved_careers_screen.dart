@@ -98,6 +98,7 @@ class _SavedCareersScreenState extends State<SavedCareersScreen> {
                 );
               },
             ),
+      bottomNavigationBar: bottomNavBar(currentIndex: 2),
     );
   }
 }
@@ -327,6 +328,7 @@ class SavedCareerDetailScreen extends StatelessWidget {
           ),
         ),
       ),
+      bottomNavigationBar: bottomNavBar(currentIndex: 2),
     );
   }
 }

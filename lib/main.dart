@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/career_sync_lifecycle.dart';
@@ -9,10 +10,16 @@ import 'providers/auth_provider.dart';
 import 'providers/career_provider.dart';
 import 'providers/quiz_provider.dart';
 import 'providers/results_provider.dart';
-import 'screens/home/home_screen.dart';
+import 'screens/dashboard/main_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // sqflite_common_ffi must be initialized before any SQLite access.
+  // Without this, desktop/web platforms throw:
+  //   Bad state: databaseFactory not initialized
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
 
   // Cloud features are opt-in: without --dart-define keys the app stays fully
   // offline and every guest feature keeps working.
@@ -70,7 +77,7 @@ class _PrepUpAppState extends State<PrepUpApp> {
           title: AppConstants.appName,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
-          home: const HomeScreen(),
+          home: const MainShell(),
         ),
       ),
     );

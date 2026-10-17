@@ -9,27 +9,46 @@ import 'exam_screen.dart';
 // ignore_for_file: use_super_parameters, unused_element_parameter
 
 class ExamSetupScreen extends StatefulWidget {
-  const ExamSetupScreen({super.key});
+  const ExamSetupScreen({
+    super.key,
+    this.initialMode = QuizMode.timed,
+    this.initialSubject,
+  });
+
+  /// Which timing mode the screen opens on.
+  final QuizMode initialMode;
+
+  /// When provided, pre-selects this subject on the subject picker.
+  /// Used by the dashboard's daily "Today's Practice" card.
+  final String? initialSubject;
 
   @override
   State<ExamSetupScreen> createState() => _ExamSetupScreenState();
 }
 
 class _ExamSetupScreenState extends State<ExamSetupScreen> {
-  String _selectedSubject = AppConstants.mathematics;
+  late String _selectedSubject;
   int _selectedQuestionCount = 10;
+  late QuizMode _selectedMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedMode = widget.initialMode;
+    _selectedSubject = widget.initialSubject ?? AppConstants.mathematics;
+  }
 
   static const _subjectIcons = <String, IconData>{
-  AppConstants.mathematics: Icons.calculate_outlined,
-  AppConstants.englishLanguage: Icons.menu_book_outlined,
-  AppConstants.physics: Icons.bolt_outlined,
-  AppConstants.chemistry: Icons.science_outlined,
-  AppConstants.biology: Icons.biotech_outlined,
-  AppConstants.economics: Icons.trending_up_outlined,
-  AppConstants.geography: Icons.public_outlined,
-  AppConstants.government: Icons.gavel_outlined,
-  AppConstants.literatureInEnglish: Icons.menu_book_outlined,
-  AppConstants.furtherMathematics: Icons.functions_outlined,
+  AppConstants.mathematics: Icons.calculate,
+  AppConstants.englishLanguage: Icons.menu_book,
+  AppConstants.physics: Icons.bolt,
+  AppConstants.chemistry: Icons.science,
+  AppConstants.biology: Icons.biotech,
+  AppConstants.economics: Icons.trending_up,
+  AppConstants.geography: Icons.public,
+  AppConstants.government: Icons.gavel,
+  AppConstants.literatureInEnglish: Icons.menu_book,
+  AppConstants.furtherMathematics: Icons.functions,
 };
 
   static const _subjectSubtitles = <String, String>{
@@ -49,9 +68,204 @@ class _ExamSetupScreenState extends State<ExamSetupScreen> {
     context.read<QuizProvider>().startQuiz(
           subject: _selectedSubject,
           questionCount: _selectedQuestionCount,
+          mode: _selectedMode,
         );
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const ExamScreen()),
+    );
+  }
+
+  Widget _subjectCard(
+    String subject, {
+    required Key? key,
+    required IconData icon,
+    required String subtitle,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final textTheme = Theme.of(context).textTheme;
+    final icon = _subjectIcons[subject] ?? Icons.school;
+    final subtitle = _subjectSubtitles[subject] ?? '';
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedSubject = subject),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primaryFixed.withValues(alpha: 0.2)
+              : AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected
+              ? Border.all(color: AppColors.primary, width: 2)
+              : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+        ),
+        child: SafeArea(
+          top: false,
+          bottom: false,
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  size: 28,
+                  color: isSelected
+                      ? AppColors.onPrimary
+                      : AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      subject,
+                      style: textTheme.headlineMedium?.copyWith(
+                        color: AppColors.background,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.outline,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  isSelected ? Icons.check : Icons.chevron_right,
+                  size: 20,
+                  color: isSelected
+                      ? AppColors.onPrimary
+                      : AppColors.outline,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _questionCountTile(int count, {required bool isSelected}) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedQuestionCount = count),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primaryFixed.withValues(alpha: 0.2)
+              : AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected
+              ? Border.all(color: AppColors.primary, width: 2)
+              : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+        ),
+        child: SafeArea(
+          top: false,
+          bottom: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.timer,
+                  size: 24,
+                  color: isSelected
+                      ? AppColors.onPrimary
+                      : AppColors.outline,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '$count',
+                style: textTheme.headlineLarge?.copyWith(
+                  color: AppColors.background,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Questions',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.outline,
+                  fontWeight: isSelected
+                      ? FontWeight.w600
+                      : FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -63,6 +277,9 @@ class _ExamSetupScreenState extends State<ExamSetupScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // Back button row
+            const _BackRow(),
+            const SizedBox(height: 8),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -71,15 +288,19 @@ class _ExamSetupScreenState extends State<ExamSetupScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const SizedBox(width: 48, height: 48,
-                            child: CircleAvatar(
-                              backgroundColor: AppColors.primary,
-                              child: Icon(
-                                Icons.school_outlined,
-                                size: 26,
-                                color: AppColors.white,
-                              ),
-                            )),
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryFixed,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.school,
+                            size: 24,
+                            color: AppColors.onPrimaryFixed,
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -87,13 +308,15 @@ class _ExamSetupScreenState extends State<ExamSetupScreen> {
                             children: [
                               Text(
                                 'Choose Subject',
-                                style: textTheme.headlineSmall,
+                                style: textTheme.headlineMedium?.copyWith(
+                                  color: AppColors.onSurface,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 'Select your exam subject and length',
                                 style: textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.textPrimary.withValues(alpha: 0.6),
+                                  color: AppColors.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -101,29 +324,47 @@ class _ExamSetupScreenState extends State<ExamSetupScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Step 1 of 2',
-                      style: textTheme.labelMedium?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${AppConstants.subjects.length} Subjects Available',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: AppColors.textPrimary.withValues(alpha: 0.5),
-                      ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Text(
+                          'Step 1 of 2',
+                          style: textTheme.labelMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${AppConstants.subjects.length} Subjects Available',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AppColors.textPrimary.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
+                    // All Subjects card
+                    _subjectCard(
+                      AppConstants.allSubjects,
+                      key: const ValueKey(AppConstants.allSubjects),
+                      icon: Icons.grid_view_outlined,
+                      subtitle: 'A mixed set from every subject',
+                      isSelected: _selectedSubject == AppConstants.allSubjects,
+                      onTap: () {
+                        setState(
+                          () => _selectedSubject = AppConstants.allSubjects,
+                        );
+                      },
+                    ),
+                    // Individual subjects
                     ...AppConstants.subjects.map((String subject) {
                       final isSelected = subject == _selectedSubject;
-                      return _SubjectCard(
+                      return _subjectCard(
+                        subject,
                         key: ValueKey(subject),
-                        subject: subject,
-                        icon: _subjectIcons[subject] ?? Icons.school_outlined,
+                        icon: _subjectIcons[subject] ?? Icons.school,
                         subtitle: _subjectSubtitles[subject] ?? '',
                         isSelected: isSelected,
                         onTap: () {
@@ -131,382 +372,220 @@ class _ExamSetupScreenState extends State<ExamSetupScreen> {
                         },
                       );
                     }),
-                    const SizedBox(height: 32),
-                    Text(
-                      'Step 2 of 2',
-                      style: textTheme.labelMedium?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Duration: ${_selectedQuestionCount == 10 ? "~15 mins" : "~30 mins"}',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: AppColors.textPrimary.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 24),
+                    // Divider
                     Row(
                       children: [
                         Expanded(
-                          child: _QuestionCountCard(
-                            questionCount: 10,
-                            durationLabel: '~15 mins',
-                            isSelected: _selectedQuestionCount == 10,
-                            onTap: () {
-                              setState(() => _selectedQuestionCount = 10);
-                            },
+                          child: Container(
+                            height: 1,
+                            color: AppColors.surfaceContainerHigh,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _QuestionCountCard(
-                            questionCount: 20,
-                            durationLabel: '~30 mins',
-                            isSelected: _selectedQuestionCount == 20,
-                            onTap: () {
-                              setState(() => _selectedQuestionCount = 20);
-                            },
+                        const Padding(
+                          padding: EdgeInsets.only(left: 16),
+                          child: Text(
+                            'How many questions?',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.onSurface,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 80),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: AppDimensions.buttonHeight,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF008751),
-                        foregroundColor: AppColors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Text(
+                          'Step 2 of 2',
+                          style: textTheme.labelMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Choose your question count',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AppColors.textPrimary.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: _questionCountTile(5, isSelected: _selectedQuestionCount == 5)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _questionCountTile(10, isSelected: _selectedQuestionCount == 10)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _questionCountTile(20, isSelected: _selectedQuestionCount == 20)),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    // Mode toggle
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ModeTile(
+                            icon: Icons.timer,
+                            label: 'Timed Exam',
+                            subtitle: '15 min · Auto-submit',
+                            isSelected: _selectedMode == QuizMode.timed,
+                            onTap: () => setState(() => _selectedMode = QuizMode.timed),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _ModeTile(
+                            icon: Icons.spa,
+                            label: 'Practice',
+                            subtitle: 'Untimed · Review anytime',
+                            isSelected: _selectedMode == QuizMode.practice,
+                            onTap: () => setState(() => _selectedMode = QuizMode.practice),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    // Start button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 60,
+                      child: Material(
+                        color: AppColors.secondary,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: _startQuiz,
+                          child: Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'START EXAM',
+                                  style: textTheme.labelMedium?.copyWith(
+                                    color: AppColors.onSecondary,
+                                    fontSize: 18,
+                                    height: 1.3,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                const Icon(
+                                  Icons.arrow_forward,
+                                  color: AppColors.onSecondary,
+                                  size: 24,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      onPressed: _startQuiz,
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('START TEST NOW'),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 24),
-                        ],
-                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
           ],
         ),
       ),
+      bottomNavigationBar: bottomNavBar(currentIndex: 1),
     );
   }
 }
 
-class _SubjectCard extends StatefulWidget {
-  final String subject;
-  final IconData icon;
-  final String subtitle;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _SubjectCard({
-    super.key,
-    required this.subject,
-    required this.icon,
-    required this.subtitle,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  State<_SubjectCard> createState() => _SubjectCardState();
-}
-
-class _SubjectCardState extends State<_SubjectCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 120),
-      vsync: this,
-    );
-    _scale = Tween<double>(begin: 1.0, end: 0.97).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _handleTapDown(TapDownDetails _) => _controller.forward();
-  void _handleTapUp(TapUpDetails _) => _controller.reverse();
-  void _handleTapCancel() => _controller.reverse();
+class _BackRow extends StatelessWidget {
+  const _BackRow();
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
-      onTap: widget.onTap,
-      child: AnimatedBuilder(
-        animation: _scale,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scale.value,
-            child: child,
-          );
-        },
-        child: Card(
-          color: widget.isSelected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.white,
-          elevation: widget.isSelected ? 4 : 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: widget.isSelected
-                ? const BorderSide(color: AppColors.primary, width: 2)
-                : BorderSide.none,
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: widget.onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: widget.isSelected
-                          ? AppColors.primary
-                          : AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      widget.icon,
-                      size: 28,
-                      color: widget.isSelected
-                          ? AppColors.white
-                          : AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.subject,
-                          style: textTheme.headlineMedium?.copyWith(
-                            color: widget.isSelected
-                                ? AppColors.primary
-                                : AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.subtitle,
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: widget.isSelected
-                                ? AppColors.primary
-                                : AppColors.textPrimary.withValues(alpha: 0.5),
-                            fontWeight: widget.isSelected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: widget.isSelected
-                          ? AppColors.primary
-                          : AppColors.background,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      widget.isSelected
-                          ? Icons.check
-                          : Icons.chevron_right,
-                      size: 20,
-                      color: widget.isSelected
-                          ? AppColors.white
-                          : AppColors.textPrimary.withValues(alpha: 0.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 4, top: 4),
+        child: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
     );
   }
 }
 
-class _QuestionCountCard extends StatefulWidget {
-  final int questionCount;
-  final String durationLabel;
+class _ModeTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
   final bool isSelected;
-  final VoidCallback onTap;  const _QuestionCountCard({
-    super.key,
-    required this.questionCount,
-    required this.durationLabel,
+  final VoidCallback onTap;
+
+  const _ModeTile({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
     required this.isSelected,
     required this.onTap,
   });
-
-  @override
-  State<_QuestionCountCard> createState() => _QuestionCountCardState();
-}
-
-class _QuestionCountCardState extends State<_QuestionCountCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 120),
-      vsync: this,
-    );
-    _scale = Tween<double>(begin: 1.0, end: 0.97).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _handleTapDown(TapDownDetails _) => _controller.forward();
-  void _handleTapUp(TapUpDetails _) => _controller.reverse();
-  void _handleTapCancel() => _controller.reverse();
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
     return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
-      onTap: widget.onTap,
-      child: AnimatedBuilder(
-        animation: _scale,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scale.value,
-            child: child,
-          );
-        },
-        child: Card(
-          color: widget.isSelected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.white,
-          elevation: widget.isSelected ? 4 : 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: widget.isSelected
-                ? const BorderSide(color: AppColors.primary, width: 2)
-                : BorderSide.none,
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: widget.onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: widget.isSelected
-                          ? AppColors.primary
-                          : AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.timer_outlined,
-                      size: 24,
-                      color: widget.isSelected
-                          ? AppColors.white
-                          : AppColors.textPrimary.withValues(alpha: 0.4),
-                    ),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primaryFixed.withValues(alpha: 0.2)
+              : AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected
+              ? Border.all(color: AppColors.primary, width: 2)
+              : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${widget.questionCount}',
-                    style: textTheme.headlineLarge?.copyWith(
-                      color: widget.isSelected
-                          ? AppColors.primary
-                          : AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Questions',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: widget.isSelected
-                          ? AppColors.primary
-                          : AppColors.textPrimary.withValues(alpha: 0.5),
-                      fontWeight: widget.isSelected
-                          ? FontWeight.w600
-                          : FontWeight.w400,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.durationLabel,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: widget.isSelected
-                          ? AppColors.primary
-                          : AppColors.textPrimary.withValues(alpha: 0.4),
-                    ),
-                  ),
-                ],
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 28,
+              color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: textTheme.labelMedium?.copyWith(
+                color: isSelected ? AppColors.primary : AppColors.onSurface,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: textTheme.bodySmall?.copyWith(
+                color: isSelected
+                    ? AppColors.primary
+                    : AppColors.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );

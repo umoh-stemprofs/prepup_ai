@@ -7,7 +7,6 @@ import '../../core/theme.dart';
 import '../../providers/quiz_provider.dart';
 import '../../providers/results_provider.dart';
 import '../analytics/weak_areas_screen.dart';
-import '../home/home_screen.dart';
 import 'answer_review_screen.dart';
 import 'exam_screen.dart';
 
@@ -50,9 +49,23 @@ class ResultsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Subject chip + mode line.
+              // Back button + subject chip + mode line.
               Row(
                 children: [
+                  IconButton(
+                    tooltip: 'Back',
+                    icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
+                    onPressed: () {
+                      // Return to the exam screen if still on the stack,
+                      // otherwise go back to the dashboard.
+                      final navigator = Navigator.of(context);
+                      if (navigator.canPop()) {
+                        navigator.pop();
+                      } else {
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                      }
+                    },
+                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -152,7 +165,7 @@ class ResultsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 _SecondaryActionButton(
-                  backgroundColor: AppColors.surfaceHigh,
+                  backgroundColor: AppColors.surfaceContainerHigh,
                   foregroundColor: AppColors.onSurface,
                   icon: Icons.replay,
                   label: 'TRY AGAIN',
@@ -179,14 +192,13 @@ class ResultsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 _SecondaryActionButton(
-                  backgroundColor: AppColors.surfaceHigh,
+                  backgroundColor: AppColors.surfaceContainerHigh,
                   foregroundColor: AppColors.onSurface,
                   icon: Icons.home_outlined,
                   label: 'GO TO HOME PAGE',
                   onTap: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
-                    );
+                    // Unwind exam/review routes back to the tab shell.
+                    Navigator.of(context).popUntil((route) => route.isFirst);
                   },
                 ),
               ],
@@ -205,7 +217,12 @@ class ResultsScreen extends StatelessWidget {
     int questionCount,
   ) async {
     final navigator = Navigator.of(context);
-    await quiz.startQuiz(subject: subject, questionCount: questionCount);
+    await quiz.startQuiz(
+      subject: subject,
+      questionCount: questionCount,
+      // Retry the same attempt shape, including its timing mode.
+      mode: quiz.mode,
+    );
     if (quiz.questions.isEmpty) return;
     navigator.pushReplacement(
       MaterialPageRoute(builder: (_) => const ExamScreen()),

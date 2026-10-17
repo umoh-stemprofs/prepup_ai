@@ -9,7 +9,13 @@ import '../../providers/career_provider.dart';
 /// The export renders the match inline below the FIND JOBS action, so this
 /// screen keeps the card in the scroll view rather than opening a bottom sheet.
 class CareerHelperScreen extends StatefulWidget {
-  const CareerHelperScreen({super.key});
+  const CareerHelperScreen({super.key, this.showBack = true});
+
+  /// Whether to render the floating back button.
+  ///
+  /// Off when this screen is the Career tab of the shell, where back would
+  /// have nowhere to go.
+  final bool showBack;
 
   @override
   State<CareerHelperScreen> createState() => _CareerHelperScreenState();
@@ -61,7 +67,7 @@ class _CareerHelperScreenState extends State<CareerHelperScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _BackRow(),
+              if (widget.showBack) const _BackRow(),
               const Text(
                 'Find Jobs For You',
                 style: TextStyle(
@@ -199,6 +205,7 @@ class _CareerHelperScreenState extends State<CareerHelperScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: bottomNavBar(currentIndex: 2),
     );
   }
 }
@@ -600,7 +607,7 @@ class _MatchResultState extends State<_MatchResult> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceHigh,
+                        color: AppColors.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(

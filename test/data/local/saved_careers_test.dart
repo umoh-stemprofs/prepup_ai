@@ -52,10 +52,10 @@ void main() {
       expect(names, contains('saved_careers'));
     });
 
-    test('the database schema version is 3', () async {
+    test('the database schema version is current', () async {
       final db = await helper.database;
 
-      expect(await db.getVersion(), 3);
+      expect(await db.getVersion(), 4);
     });
 
     test('the sync queue table is created on a fresh database', () async {
