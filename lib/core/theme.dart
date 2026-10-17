@@ -26,6 +26,48 @@ class AppColors {
   static const Color textPrimary = Color(0xFF111111);
 
   static const Color white = Color(0xFFFFFFFF);
+
+  // ---------------------------------------------------------------------------
+  // Design tokens from `design/*/code.html`
+  // ---------------------------------------------------------------------------
+  //
+  // Kept beside the brand colors so screens reference names instead of
+  // repeating hex literals from the exports. `primary` above is the export's
+  // `primary-container`; [primaryAction] is its darker `primary`.
+
+  /// Solid fill for primary actions and selected subject chips.
+  static const Color primaryAction = Color(0xFF004AC6);
+
+  /// `primary-container` — selected two-up choice cards.
+  static const Color primaryContainer = Color(0xFF2563EB);
+  static const Color onPrimaryContainer = Color(0xFFEEEFFF);
+
+  /// `primary-fixed` — subject chip and career icon tile.
+  static const Color primaryFixed = Color(0xFFDBE1FF);
+  static const Color onPrimaryFixed = Color(0xFF00174B);
+
+  /// Brand green — badges and the save action.
+  static const Color secondary = Color(0xFF006E2D);
+  static const Color secondaryContainer = Color(0xFF7CF994);
+  static const Color onSecondaryContainer = Color(0xFF007230);
+
+  /// Amber — the "find jobs" action.
+  static const Color tertiaryContainer = Color(0xFFA65900);
+  static const Color onTertiaryContainer = Color(0xFFFFEDE1);
+
+  /// Error containers as exported (#FFDAD6 / #93000A), plus the ring red.
+  static const Color errorContainer = Color(0xFFFFDAD6);
+  static const Color onErrorContainer = Color(0xFF93000A);
+  static const Color errorRing = Color(0xFFBA1A1A);
+
+  /// Surfaces and text.
+  static const Color surface = Color(0xFFF8F9FA);
+  static const Color surfaceContainerLow = Color(0xFFF3F4F5);
+  static const Color surfaceHigh = Color(0xFFE7E8E9);
+  static const Color surfaceVariant = Color(0xFFE1E3E4);
+  static const Color onSurface = Color(0xFF191C1D);
+  static const Color onSurfaceVariant = Color(0xFF434655);
+  static const Color outline = Color(0xFF737686);
 }
 
 /// Shared dimensions.
@@ -52,9 +94,7 @@ class AppTheme {
       primary: AppColors.primary,
       error: AppColors.error,
       brightness: Brightness.light,
-    ).copyWith(
-      surface: AppColors.background,
-    );
+    ).copyWith(surface: AppColors.background);
 
     // Extra-large typography: titles 24px+ ExtraBold, body/questions 18-20px
     // Bold, all in #111111. Font family intentionally omitted → system Roboto.
@@ -159,9 +199,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(AppDimensions.buttonRadius),
         ),
       ),
-      textStyle: WidgetStatePropertyAll<TextStyle>(
-        textTheme.labelLarge!,
-      ),
+      textStyle: WidgetStatePropertyAll<TextStyle>(textTheme.labelLarge!),
     );
 
     return ThemeData(
@@ -181,8 +219,12 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(style: elevatedButtonStyle),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: elevatedButtonStyle.copyWith(
-          backgroundColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
-          foregroundColor: const WidgetStatePropertyAll<Color>(AppColors.primary),
+          backgroundColor: const WidgetStatePropertyAll<Color>(
+            Colors.transparent,
+          ),
+          foregroundColor: const WidgetStatePropertyAll<Color>(
+            AppColors.primary,
+          ),
           side: const WidgetStatePropertyAll<BorderSide>(
             BorderSide(color: AppColors.primary, width: 2),
           ),
@@ -197,7 +239,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
         hintStyle: textTheme.bodyMedium?.copyWith(
           color: AppColors.textPrimary.withValues(alpha: 0.5),
           fontWeight: FontWeight.w500,

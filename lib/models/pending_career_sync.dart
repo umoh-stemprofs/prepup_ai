@@ -16,15 +16,22 @@ enum CareerSyncOperation {
 
 /// One queued cloud write, persisted in `pending_career_sync`.
 ///
-/// Rows are keyed by [careerTitle] so repeated edits to the same role collapse
-/// into a single pending operation instead of stacking up.
+/// Rows are keyed by ([userId], [careerTitle]) so repeated edits to the same
+/// role collapse into a single pending operation, while two accounts sharing a
+/// phone keep separate queues. A row is only ever flushed to the account that
+/// queued it — see [CareerSyncService.queueUpsert].
 class PendingCareerSync {
   const PendingCareerSync({
+    required this.userId,
     required this.careerTitle,
     required this.operation,
     required this.queuedAt,
     this.career,
   });
+
+  /// The account this write belongs to. Never empty: guest bookmark changes are
+  /// stored locally only and never queued.
+  final String userId;
 
   /// The role this operation targets.
   final String careerTitle;
@@ -38,14 +45,22 @@ class PendingCareerSync {
   /// Payload for [CareerSyncOperation.upsert]; null for deletes.
   final SavedCareer? career;
 
-  factory PendingCareerSync.upsert(SavedCareer career) => PendingCareerSync(
+  factory PendingCareerSync.upsert(
+    SavedCareer career, {
+    required String userId,
+  }) => PendingCareerSync(
+    userId: userId,
     careerTitle: career.careerTitle,
     operation: CareerSyncOperation.upsert,
     queuedAt: DateTime.now(),
     career: career,
   );
 
-  factory PendingCareerSync.delete(String careerTitle) => PendingCareerSync(
+  factory PendingCareerSync.delete(
+    String careerTitle, {
+    required String userId,
+  }) => PendingCareerSync(
+    userId: userId,
     careerTitle: careerTitle,
     operation: CareerSyncOperation.delete,
     queuedAt: DateTime.now(),
@@ -71,6 +86,7 @@ class PendingCareerSync {
     }
 
     return PendingCareerSync(
+      userId: map['user_id'] as String? ?? '',
       careerTitle: map['career_title'] as String? ?? '',
       operation: operation,
       queuedAt:
@@ -81,6 +97,7 @@ class PendingCareerSync {
   }
 
   Map<String, dynamic> toMap() => <String, dynamic>{
+    'user_id': userId,
     'career_title': careerTitle,
     'operation': operation.name,
     'payload': jsonEncode(career?.toJson() ?? const <String, dynamic>{}),
@@ -88,5 +105,6 @@ class PendingCareerSync {
   };
 
   @override
-  String toString() => 'PendingCareerSync($careerTitle, ${operation.name})';
+  String toString() =>
+      'PendingCareerSync($userId, $careerTitle, ${operation.name})';
 }

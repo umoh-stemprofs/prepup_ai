@@ -5,248 +5,288 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme.dart';
 import '../../providers/quiz_provider.dart';
+import '../../providers/results_provider.dart';
+import '../analytics/weak_areas_screen.dart';
 import '../home/home_screen.dart';
 import 'answer_review_screen.dart';
+import 'exam_screen.dart';
 
+/// "Exam Result" — the pass/fail summary from `design/results/code.html`.
+///
+/// The export's Pass/Fail tab toggle is a design-time state switcher, not a real
+/// control (the score is fixed once the attempt ends), so it is not rendered.
 class ResultsScreen extends StatelessWidget {
   const ResultsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Watching the quiz keeps this screen in sync; the read model derives the
+    // score and topic breakdown from that same in-memory attempt.
     final quiz = context.watch<QuizProvider>();
-    final session = quiz.lastSession;
+    final results = context.read<ResultsProvider>();
+    final session = results.session;
     if (session == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Result')),
-        body: const Center(child: Text('No session data.')),
+        backgroundColor: AppColors.surface,
+        body: const SafeArea(
+          child: Center(
+            child: Text(
+              'No session data.',
+              style: TextStyle(fontSize: 18, color: AppColors.onSurface),
+            ),
+          ),
+        ),
       );
     }
 
-    final isPass = session.isPass;
-    final percentage = session.scorePercentage;
+    final bool isPass = session.isPass;
+    final int wrongCount = results.wrongCount;
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 4, 24, 48),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 8),
-              // Subject + mode chip
+              // Subject chip + mode line.
               Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 6,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(20),
+                      color: AppColors.primaryFixed,
+                      borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      session.subject,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      session.subject.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 16 / 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.6,
+                        color: AppColors.onPrimaryFixed,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
+                  const Text(
                     'JAMB Mock · CBT Mode',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textPrimary.withValues(alpha: 0.5),
-                        ),
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 16 / 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Text(
+              const SizedBox(height: 4),
+              const Text(
                 'Exam Result',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: AppColors.textPrimary,
-                    ),
+                style: TextStyle(
+                  fontSize: 28,
+                  height: 36 / 28,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.onSurface,
+                ),
               ),
               const SizedBox(height: 24),
-              // Top result card with ring + badge
               _ResultCard(
                 isPass: isPass,
-                percentage: percentage,
+                percentage: session.scorePercentage,
                 subject: session.subject,
                 totalQuestions: session.totalQuestions,
-                correctCount: session.score,
-                wrongCount: session.totalQuestions - session.score,
               ),
               const SizedBox(height: 24),
-              // Metrics cards
               Row(
                 children: [
                   Expanded(
                     child: _MetricCard(
-                      icon: Icons.check_circle_outline,
-                      iconColor: AppColors.success,
-                      backgroundColor: AppColors.success.withValues(alpha: 0.1),
+                      icon: Icons.done,
+                      iconColor: AppColors.onSecondaryContainer,
+                      backgroundColor: AppColors.secondaryContainer,
                       value: session.score,
                       label: 'Correct',
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: _MetricCard(
-                      icon: Icons.cancel_outlined,
-                      iconColor: AppColors.error,
-                      backgroundColor: AppColors.error.withValues(alpha: 0.1),
-                      value: session.totalQuestions - session.score,
+                      icon: Icons.close,
+                      iconColor: AppColors.onErrorContainer,
+                      backgroundColor: AppColors.errorContainer,
+                      value: wrongCount,
                       label: 'Wrong',
+                      // Phase 10.1: the Wrong card is a shortcut into the
+                      // weak-areas list.
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const WeakAreasScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 32),
-              // Action buttons
-              SizedBox(
-                width: double.infinity,
-                height: AppDimensions.buttonHeight,
-                child: FilledButton(
-                  onPressed: () {
+              if (!isPass) ...[
+                _SecondaryActionButton(
+                  backgroundColor: AppColors.primaryAction,
+                  foregroundColor: Colors.white,
+                  icon: Icons.rate_review_outlined,
+                  label: 'REVIEW MISTAKES',
+                  onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const AnswerReviewScreen(),
                       ),
                     );
                   },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.visibility_outlined, size: 20),
-                      SizedBox(width: 8),
-                      Text('CHECK MY ANSWERS'),
-                    ],
+                ),
+                const SizedBox(height: 16),
+                _SecondaryActionButton(
+                  backgroundColor: AppColors.surfaceHigh,
+                  foregroundColor: AppColors.onSurface,
+                  icon: Icons.replay,
+                  label: 'TRY AGAIN',
+                  onTap: () => _tryAgain(
+                    context,
+                    quiz,
+                    session.subject,
+                    session.totalQuestions,
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: AppDimensions.buttonHeight,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
+              ] else ...[
+                _SecondaryActionButton(
+                  backgroundColor: AppColors.primaryAction,
+                  foregroundColor: Colors.white,
+                  icon: Icons.visibility_outlined,
+                  label: 'CHECK MY ANSWERS',
+                  onTap: () {
+                    Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const HomeScreen(),
+                        builder: (_) => const AnswerReviewScreen(),
                       ),
                     );
                   },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary, width: 2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.home_outlined, size: 20),
-                      SizedBox(width: 8),
-                      Text('GO TO HOME PAGE'),
-                    ],
-                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
+                _SecondaryActionButton(
+                  backgroundColor: AppColors.surfaceHigh,
+                  foregroundColor: AppColors.onSurface,
+                  icon: Icons.home_outlined,
+                  label: 'GO TO HOME PAGE',
+                  onTap: () {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    );
+                  },
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
   }
+
+  /// Restarts the same subject/size, then opens the exam.
+  static Future<void> _tryAgain(
+    BuildContext context,
+    QuizProvider quiz,
+    String subject,
+    int questionCount,
+  ) async {
+    final navigator = Navigator.of(context);
+    await quiz.startQuiz(subject: subject, questionCount: questionCount);
+    if (quiz.questions.isEmpty) return;
+    navigator.pushReplacement(
+      MaterialPageRoute(builder: (_) => const ExamScreen()),
+    );
+  }
 }
 
 class _ResultCard extends StatelessWidget {
-  final bool isPass;
-  final double percentage;
-  final String subject;
-  final int totalQuestions;
-  final int correctCount;
-  final int wrongCount;
-
   const _ResultCard({
     required this.isPass,
     required this.percentage,
     required this.subject,
     required this.totalQuestions,
-    required this.correctCount,
-    required this.wrongCount,
   });
+
+  final bool isPass;
+  final double percentage;
+  final String subject;
+  final int totalQuestions;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final Color accent = isPass ? AppColors.secondary : AppColors.errorRing;
+    final Color badgeBackground = isPass
+        ? AppColors.secondaryContainer
+        : AppColors.errorContainer;
+    final Color badgeForeground = isPass
+        ? AppColors.onSecondaryContainer
+        : AppColors.onErrorContainer;
 
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Color(0x14000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         children: [
-          // Badge
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
-              color: isPass
-                  ? AppColors.success
-                  : AppColors.error,
-              borderRadius: BorderRadius.circular(20),
+              color: badgeBackground,
+              borderRadius: BorderRadius.circular(999),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  isPass ? Icons.check_circle_outlined : Icons.refresh,
-                  size: 18,
-                  color: AppColors.white,
+                  isPass ? Icons.check_circle : Icons.refresh,
+                  size: 20,
+                  color: badgeForeground,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Text(
-                  isPass ? 'YOU PASSED!' : 'NEEDS IMPROVEMENT',
-                  style: textTheme.labelMedium?.copyWith(
-                    color: AppColors.white,
+                  isPass ? 'YOU PASSED!' : 'TRY AGAIN',
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 24 / 16,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
+                    color: badgeForeground,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          // Donut ring
+          const SizedBox(height: 24),
           SizedBox(
-            width: 160,
-            height: 160,
+            width: 176,
+            height: 176,
             child: CustomPaint(
-              painter: _DonutPainter(
-                percentage: percentage.clamp(0.0, 100.0),
-                strokeColor: isPass ? AppColors.success : AppColors.error,
-                backgroundColor: AppColors.textPrimary.withValues(alpha: 0.08),
+              painter: _RingPainter(
+                percentage: percentage.clamp(0, 100).toDouble(),
+                progressColor: accent,
+                trackColor: AppColors.surfaceVariant,
               ),
               child: Center(
                 child: Column(
@@ -254,16 +294,20 @@ class _ResultCard extends StatelessWidget {
                   children: [
                     Text(
                       '${percentage.round()}%',
-                      style: textTheme.displayMedium?.copyWith(
-                        color: AppColors.textPrimary,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        height: 36 / 28,
                         fontWeight: FontWeight.w800,
+                        color: AppColors.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
+                    const Text(
                       'Score',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: AppColors.textPrimary.withValues(alpha: 0.5),
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 16 / 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -271,22 +315,29 @@ class _ResultCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Text(
-            isPass ? 'Brilliant performance!' : "Don't give up! Try again.",
-            style: textTheme.bodyMedium?.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
+            isPass
+                ? 'Brilliant performance!'
+                : "Don't give up! Try again to score higher.",
             textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 18,
+              height: 28 / 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.onSurface,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             '$subject · $totalQuestions Questions Answered',
-            style: textTheme.bodySmall?.copyWith(
-              color: AppColors.textPrimary.withValues(alpha: 0.5),
-            ),
             textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 16 / 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -294,85 +345,83 @@ class _ResultCard extends StatelessWidget {
   }
 }
 
-class _DonutPainter extends CustomPainter {
-  final double percentage;
-  final Color strokeColor;
-  final Color backgroundColor;
-
-  _DonutPainter({
+/// 176px ring with the export's 12px stroke and rounded caps.
+class _RingPainter extends CustomPainter {
+  _RingPainter({
     required this.percentage,
-    required this.strokeColor,
-    required this.backgroundColor,
+    required this.progressColor,
+    required this.trackColor,
   });
+
+  final double percentage;
+  final Color progressColor;
+  final Color trackColor;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) / 2 - 10;
+    final radius = size.width / 2 - 14;
     const strokeWidth = 12.0;
 
-    // Background ring
     canvas.drawCircle(
       center,
       radius,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
-        ..color = backgroundColor,
+        ..color = trackColor,
     );
 
-    // Progress arc
-    final sweepAngle = (percentage / 100) * 2 * math.pi;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -math.pi / 2,
-      sweepAngle,
+      (percentage / 100) * 2 * math.pi,
       false,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.round
-        ..color = strokeColor,
+        ..color = progressColor,
     );
   }
 
   @override
-  bool shouldRepaint(_DonutPainter oldDelegate) {
+  bool shouldRepaint(_RingPainter oldDelegate) {
     return oldDelegate.percentage != percentage ||
-        oldDelegate.strokeColor != strokeColor ||
-        oldDelegate.backgroundColor != backgroundColor;
+        oldDelegate.progressColor != progressColor ||
+        oldDelegate.trackColor != trackColor;
   }
 }
 
 class _MetricCard extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final Color backgroundColor;
-  final int value;
-  final String label;
-
   const _MetricCard({
     required this.icon,
     required this.iconColor,
     required this.backgroundColor,
     required this.value,
     required this.label,
+    this.onTap,
   });
+
+  final IconData icon;
+  final Color iconColor;
+  final Color backgroundColor;
+  final int value;
+  final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Color(0x14000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -385,36 +434,102 @@ class _MetricCard extends StatelessWidget {
               color: backgroundColor,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              size: 24,
-              color: iconColor,
-            ),
+            child: Icon(icon, size: 24, color: iconColor),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '$value',
-                  style: textTheme.headlineMedium?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    height: 32 / 24,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.onSurface,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
                   label,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: AppColors.textPrimary.withValues(alpha: 0.5),
-                  ),
                   overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 16 / 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+
+    if (onTap == null) return card;
+
+    return Semantics(
+      button: true,
+      label: '$label answers — view weak areas',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: card,
+        ),
+      ),
+    );
+  }
+}
+
+class _SecondaryActionButton extends StatelessWidget {
+  const _SecondaryActionButton({
+    required this.backgroundColor,
+    required this.foregroundColor,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 60,
+      width: double.infinity,
+      child: Material(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 24, color: foregroundColor),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 24 / 16,
+                    fontWeight: FontWeight.w700,
+                    color: foregroundColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

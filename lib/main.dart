@@ -8,6 +8,7 @@ import 'core/theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/career_provider.dart';
 import 'providers/quiz_provider.dart';
+import 'providers/results_provider.dart';
 import 'screens/home/home_screen.dart';
 
 Future<void> main() async {
@@ -28,18 +29,41 @@ Future<void> main() async {
 /// PrepUp AI application root: theme + guest-first provider root.
 ///
 /// Boots straight to the dashboard — no Supabase keys and no sign-in required.
-class PrepUpApp extends StatelessWidget {
+class PrepUpApp extends StatefulWidget {
   const PrepUpApp({super.key});
+
+  @override
+  State<PrepUpApp> createState() => _PrepUpAppState();
+}
+
+class _PrepUpAppState extends State<PrepUpApp> {
+  late final AuthProvider _auth = AuthProvider.guest();
+
+  // Both features queue cloud writes, and a queue row must belong to the
+  // account that created it — so they read the same session the UI shows.
+  late final QuizProvider _quiz = QuizProvider(
+    userIdProvider: () => _auth.userId,
+  );
+  late final CareerProvider _career = CareerProvider(
+    userIdProvider: () => _auth.userId,
+  );
+
+  @override
+  void dispose() {
+    _auth.dispose();
+    _quiz.dispose();
+    _career.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthProvider>(
-          create: (_) => AuthProvider.guest(),
-        ),
-        ChangeNotifierProvider<QuizProvider>(create: (_) => QuizProvider()),
-        ChangeNotifierProvider<CareerProvider>(create: (_) => CareerProvider()),
+        ChangeNotifierProvider<AuthProvider>.value(value: _auth),
+        ChangeNotifierProvider<QuizProvider>.value(value: _quiz),
+        ChangeNotifierProvider<CareerProvider>.value(value: _career),
+        Provider<ResultsProvider>(create: (_) => ResultsProvider(_quiz)),
       ],
       child: CareerSyncLifecycle(
         child: MaterialApp(

@@ -10,9 +10,14 @@ class CareerProvider extends ChangeNotifier {
   CareerProvider({
     DatabaseHelper? databaseHelper,
     CareerSyncService? syncService,
+    String? Function()? userIdProvider,
   }) : _databaseHelper = databaseHelper ?? DatabaseHelper.instance {
-    _syncService = syncService ??
-        CareerSyncService(databaseHelper: _databaseHelper);
+    _syncService =
+        syncService ??
+        CareerSyncService(
+          databaseHelper: _databaseHelper,
+          userIdProvider: userIdProvider,
+        );
   }
 
   final DatabaseHelper _databaseHelper;
@@ -24,7 +29,8 @@ class CareerProvider extends ChangeNotifier {
 
   WorkEnvironment get workEnvironment => _workEnvironment;
   ActivityPreference get activityPreference => _activityPreference;
-  Set<String> get favoriteSubjects => Set<String>.unmodifiable(_favoriteSubjects);
+  Set<String> get favoriteSubjects =>
+      Set<String>.unmodifiable(_favoriteSubjects);
 
   bool get hasSelection => _favoriteSubjects.isNotEmpty;
 
@@ -215,7 +221,7 @@ class CareerProvider extends ChangeNotifier {
         return (
           'Pharmacist',
           'You study how substances work in the body and help people feel '
-                'better. Precision and care matter.',
+              'better. Precision and care matter.',
           ['Chemistry', 'Biology'],
         );
 
@@ -231,7 +237,7 @@ class CareerProvider extends ChangeNotifier {
         return (
           'Biomedical Scientist',
           'You investigate how life works at the cellular level and help '
-                'develop new treatments.',
+              'develop new treatments.',
           ['Biology', 'Chemistry'],
         );
 
@@ -288,15 +294,9 @@ class CareerProvider extends ChangeNotifier {
   }
 }
 
-enum WorkEnvironment {
-  indoor,
-  outdoor,
-}
+enum WorkEnvironment { indoor, outdoor }
 
-enum ActivityPreference {
-  solvingMath,
-  building,
-}
+enum ActivityPreference { solvingMath, building }
 
 /// Deterministic career match result shown in the UI.
 class CareerMatch {

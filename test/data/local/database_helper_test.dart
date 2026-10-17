@@ -7,6 +7,11 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:prepup_ai/core/constants.dart';
 import 'package:prepup_ai/data/local/database_helper.dart';
 import 'package:prepup_ai/data/local/questions_local_service.dart';
+import 'package:prepup_ai/models/quiz_session.dart';
+import 'package:prepup_ai/models/weak_area.dart';
+
+final DateTime _completedAt = DateTime(2026, 10, 17, 9);
+final DateTime _later = DateTime(2026, 10, 17, 11);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -110,6 +115,144 @@ void main() {
       }
     },
   );
+
+  test('getQuestionsByTopic returns only the requested sub-topic', () async {
+    await helper.seedQuestionsFromAssetsIfEmpty();
+
+    final service = QuestionsLocalService(helper);
+    final questions = await service.getQuestionsByTopic(
+      AppConstants.mathematics,
+      'Algebra',
+      limit: 10,
+    );
+
+    expect(questions, isNotEmpty);
+    for (final question in questions) {
+      expect(question['subject'], equals(AppConstants.mathematics));
+      expect(question['syllabus_topic'], equals('Algebra'));
+    }
+  });
+
+  test('both queues record which account owns the write', () async {
+    final db = await helper.database;
+
+    final resultColumns = await db.rawQuery(
+      'PRAGMA table_info(pending_sync_results)',
+    );
+    expect(
+      resultColumns.map((column) => column['name'] as String),
+      containsAll(['session_uuid', 'user_id', 'payload', 'created_at']),
+    );
+
+    final careerColumns = await db.rawQuery(
+      'PRAGMA table_info(pending_career_sync)',
+    );
+    expect(
+      careerColumns.map((column) => column['name'] as String),
+      containsAll(['user_id', 'career_title']),
+    );
+  });
+
+  test(
+    'enqueuePendingSyncResult stores one envelope per attempt, owner-scoped',
+    () async {
+      final db = await helper.database;
+      await db.delete('pending_sync_results');
+
+      final session = QuizSession(
+        sessionUuid: 'session-1',
+        subject: AppConstants.mathematics,
+        score: 3,
+        totalQuestions: 4,
+        scorePercentage: 75,
+        isPass: true,
+        timeSpentSeconds: 120,
+        completedAt: _completedAt,
+      );
+      const areas = [
+        WeakArea(
+          subject: AppConstants.mathematics,
+          syllabusTopic: 'Algebra',
+          incorrectCount: 1,
+          totalCount: 4,
+        ),
+      ];
+
+      await helper.enqueuePendingSyncResult(
+        session,
+        weakAreas: areas,
+        userId: 'user-a',
+      );
+      // Same attempt again: AM-3 says upsert, not duplicate.
+      await helper.enqueuePendingSyncResult(
+        session,
+        weakAreas: areas,
+        userId: 'user-a',
+      );
+
+      expect(await helper.pendingSyncResultCount(), 1);
+
+      final rows = await helper.getPendingSyncResults(userId: 'user-a');
+      expect(rows.single['session_uuid'], 'session-1');
+
+      final payload =
+          jsonDecode(rows.single['payload'] as String) as Map<String, dynamic>;
+      expect(payload['session'], isA<Map<String, dynamic>>());
+      expect(payload['weak_areas'], hasLength(1));
+
+      // A guest attempt is local history only: no owner, no queue row.
+      await helper.enqueuePendingSyncResult(
+        QuizSession(
+          sessionUuid: 'session-guest',
+          subject: AppConstants.physics,
+          score: 1,
+          totalQuestions: 2,
+          scorePercentage: 50,
+          isPass: true,
+          timeSpentSeconds: 60,
+          completedAt: _completedAt,
+        ),
+        weakAreas: const [],
+      );
+      expect(await helper.pendingSyncResultCount(), 1);
+      expect(await helper.getPendingSyncResults(userId: 'user-b'), isEmpty);
+    },
+  );
+
+  test('getRecentSessions returns the newest attempt first', () async {
+    final db = await helper.database;
+    await db.delete('local_quiz_sessions');
+
+    await helper.saveQuizSession(
+      QuizSession(
+        sessionUuid: 'older',
+        subject: AppConstants.mathematics,
+        score: 2,
+        totalQuestions: 4,
+        scorePercentage: 50,
+        isPass: true,
+        timeSpentSeconds: 90,
+        completedAt: _completedAt,
+      ),
+    );
+    await helper.saveQuizSession(
+      QuizSession(
+        sessionUuid: 'newer',
+        subject: AppConstants.physics,
+        score: 3,
+        totalQuestions: 4,
+        scorePercentage: 75,
+        isPass: true,
+        timeSpentSeconds: 80,
+        completedAt: _later,
+      ),
+    );
+
+    final history = await helper.getRecentSessions(limit: 1);
+
+    expect(history, hasLength(1));
+    expect(history.single.sessionUuid, 'newer');
+  });
 
   test(
     'getAllSubjectsQuestionCounts returns counts for all subjects',

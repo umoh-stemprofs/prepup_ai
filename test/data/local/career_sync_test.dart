@@ -4,6 +4,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:prepup_ai/data/local/database_helper.dart';
 import 'package:prepup_ai/data/remote/career_remote_store.dart';
 import 'package:prepup_ai/data/remote/career_sync_service.dart';
+import 'package:prepup_ai/models/pending_career_sync.dart';
 import 'package:prepup_ai/models/saved_career.dart';
 import 'package:prepup_ai/providers/career_provider.dart';
 
@@ -95,7 +96,7 @@ void main() {
         await sync.queueUpsert(career('Pharmacist'));
         await sync.queueDelete('Ecologist');
 
-        final pending = await helper.getPendingCareerSync();
+        final pending = await helper.getPendingCareerSync(userId: userId);
         final byTitle = <String, String>{
           for (final operation in pending)
             operation.careerTitle: operation.operation.name,
@@ -115,7 +116,7 @@ void main() {
       await sync.queueDelete('Ecologist');
       await sync.queueUpsert(career('Ecologist'));
 
-      final pending = await helper.getPendingCareerSync();
+      final pending = await helper.getPendingCareerSync(userId: userId);
 
       expect(pending, hasLength(1));
       expect(pending.single.operation.name, 'upsert');
@@ -159,15 +160,44 @@ void main() {
       expect(await sync.pendingCount(), 1);
     });
 
-    test('a signed-out user keeps the queue for a later session', () async {
+    test('a guest never queues, so no account can inherit the write', () async {
       final sync = service(userIdProvider: () => null);
       await sync.queueUpsert(career('Ecologist'));
 
       final report = await sync.flush();
 
       expect(report.skipped, CareerSyncSkip.notSignedIn);
-      expect(report.pending, 1);
+      expect(report.pending, 0);
       expect(remote.upsertedTitles, isEmpty);
+      expect(await helper.getPendingCareerSync(userId: userId), isEmpty);
+    });
+
+    test(
+      "another account's queue is never flushed under this session",
+      () async {
+        final firstAccount = service(userIdProvider: () => 'user-a');
+        await firstAccount.queueUpsert(career('Ecologist'));
+
+        final secondAccount = service(userIdProvider: () => 'user-b');
+        final report = await secondAccount.flush();
+
+        expect(report.synced, 0);
+        expect(remote.upsertedTitles, isEmpty);
+        // user-a's write is still waiting for user-a, untouched.
+        expect(
+          await helper.getPendingCareerSync(userId: 'user-a'),
+          hasLength(1),
+        );
+      },
+    );
+
+    test('the queue rejects a row with no owner', () async {
+      expect(
+        () => helper.queueCareerSync(
+          PendingCareerSync.upsert(career('Ecologist'), userId: ''),
+        ),
+        throwsArgumentError,
+      );
     });
 
     test('a remote failure keeps the operation queued with an error', () async {

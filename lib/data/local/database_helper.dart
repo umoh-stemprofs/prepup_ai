@@ -56,10 +56,7 @@ class DatabaseHelper {
   /// Opens the SQLite database, creating the offline schema on first launch.
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
-    final path = p.join(
-      dbPath,
-      debugDatabaseFileName ?? 'prepup_ai_local.db',
-    );
+    final path = p.join(dbPath, debugDatabaseFileName ?? 'prepup_ai_local.db');
 
     return openDatabase(
       path,
@@ -73,8 +70,9 @@ class DatabaseHelper {
   /// Current offline schema version.
   ///
   /// v1 introduced the question/session/weak-area cache; v2 added saved
-  /// career bookmarks; v3 added the career sync queue.
-  static const int _schemaVersion = 3;
+  /// career bookmarks; v3 added the career sync queue; v4 scoped that queue to
+  /// a user account.
+  static const int _schemaVersion = 4;
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
@@ -82,6 +80,28 @@ class DatabaseHelper {
     }
     if (oldVersion < 3) {
       await _createPendingCareerSyncTable(db);
+    }
+    if (oldVersion < 4) {
+      await _scopePendingCareerSyncToUser(db);
+      await _addResultQueueOwner(db);
+    }
+  }
+
+  /// Records who a queued result belongs to (schema v4).
+  ///
+  /// Existing rows keep an empty owner: they were written before accounts were
+  /// tracked, so they are treated as unsyncable rather than risk uploading a
+  /// guest attempt into the next account that signs in.
+  Future<void> _addResultQueueOwner(Database db) async {
+    final columns = await db.rawQuery(
+      'PRAGMA table_info(pending_sync_results)',
+    );
+    final hasUserId = columns.any((column) => column['name'] == 'user_id');
+    if (!hasUserId) {
+      await db.execute(
+        "ALTER TABLE pending_sync_results "
+        "ADD COLUMN user_id TEXT NOT NULL DEFAULT ''",
+      );
     }
   }
 
@@ -131,6 +151,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE pending_sync_results (
         session_uuid TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL DEFAULT '',
         payload TEXT NOT NULL,
         created_at TEXT NOT NULL
       )
@@ -197,9 +218,7 @@ class DatabaseHelper {
   /// Returns the number of cached questions.
   Future<int> getQuestionCount() async {
     final db = await database;
-    final row = await db.rawQuery(
-      'SELECT COUNT(*) AS c FROM local_questions',
-    );
+    final row = await db.rawQuery('SELECT COUNT(*) AS c FROM local_questions');
     return (row.first['c'] as int?) ?? 0;
   }
 
@@ -212,24 +231,20 @@ class DatabaseHelper {
   /// 1/0 to match the INTEGER column.
   Future<void> saveQuizSession(QuizSession session) async {
     final db = await database;
-    await db.insert(
-      'local_quiz_sessions',
-      {
-        ...session.toMap(),
-        'is_pass': session.isPass ? 1 : 0,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('local_quiz_sessions', {
+      ...session.toMap(),
+      'is_pass': session.isPass ? 1 : 0,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  /// Persists one or more [WeakArea] rows belonging to a completed session.
-  Future<void> saveWeakAreas(List<WeakArea> areas) async {
+  /// Persists [areas] as the weak areas of [sessionUuid].
+  Future<void> saveWeakAreas(String sessionUuid, List<WeakArea> areas) async {
     final db = await database;
     final batch = db.batch();
     for (final area in areas) {
       batch.insert('local_weak_areas', {
         ...area.toMap(),
-        'session_uuid': '',
+        'session_uuid': sessionUuid,
       });
     }
     await batch.commit(noResult: true);
@@ -238,10 +253,7 @@ class DatabaseHelper {
   /// Returns all recorded weak-area rows, most recent first.
   Future<List<WeakArea>> getWeakAreas() async {
     final db = await database;
-    final rows = await db.query(
-      'local_weak_areas',
-      orderBy: 'id DESC',
-    );
+    final rows = await db.query('local_weak_areas', orderBy: 'id DESC');
     return rows.map((row) => WeakArea.fromMap(row)).toList();
   }
 
@@ -259,10 +271,7 @@ class DatabaseHelper {
   /// Returns bookmarked careers, newest first.
   Future<List<SavedCareer>> getSavedCareers() async {
     final db = await database;
-    final rows = await db.query(
-      'saved_careers',
-      orderBy: 'saved_at DESC',
-    );
+    final rows = await db.query('saved_careers', orderBy: 'saved_at DESC');
     return rows.map((row) => SavedCareer.fromMap(row)).toList();
   }
 
@@ -272,23 +281,57 @@ class DatabaseHelper {
     await db.delete('saved_careers', where: 'id = ?', whereArgs: [id]);
   }
 
-  /// Queued cloud writes for bookmarks (schema v3).
+  /// Queued cloud writes for bookmarks (schema v3, user-scoped in v4).
   ///
-  /// `career_title` is the primary key so queuing the same role again replaces
-  /// the earlier operation, coalescing save/delete churn into one write.
+  /// ([user_id], `career_title`) is the primary key: queuing the same role
+  /// again replaces the earlier operation, coalescing save/delete churn into
+  /// one write, while separate accounts never share a row.
   Future<void> _createPendingCareerSyncTable(Database db) async {
     await db.execute('''
       CREATE TABLE pending_career_sync (
-        career_title TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        career_title TEXT NOT NULL,
         operation TEXT NOT NULL,
         payload TEXT NOT NULL,
-        queued_at TEXT NOT NULL
+        queued_at TEXT NOT NULL,
+        PRIMARY KEY (user_id, career_title)
       )
     ''');
   }
 
-  /// Queues a cloud write, replacing any pending operation for the same role.
+  /// Adds `user_id` to the career queue (schema v4).
+  ///
+  /// Rows written before v4 carry no account, so they cannot be attributed
+  /// safely: flushing one could write a guest's bookmark into whoever signs in
+  /// next. They are dropped. Nothing user-visible is lost — the bookmark itself
+  /// still lives in `saved_careers`, and the next edit re-queues it against the
+  /// account that made the change.
+  Future<void> _scopePendingCareerSyncToUser(Database db) async {
+    final rows = await db.query('pending_career_sync');
+    await db.execute('DROP TABLE IF EXISTS pending_career_sync');
+    await _createPendingCareerSyncTable(db);
+
+    for (final row in rows) {
+      final userId = row['user_id'] as String?;
+      if (userId == null || userId.isEmpty) continue;
+      await db.insert('pending_career_sync', <String, Object?>{
+        ...row,
+        'user_id': userId,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+  }
+
+  /// Queues a cloud write, replacing any pending operation for the same role
+  /// in the same account's queue.
   Future<void> queueCareerSync(PendingCareerSync operation) async {
+    if (operation.userId.isEmpty) {
+      // A queue row with no account would be flushed to whoever signs in next.
+      throw ArgumentError.value(
+        operation.userId,
+        'userId',
+        'Queued career writes must belong to a signed-in user.',
+      );
+    }
     final db = await database;
     await db.insert(
       'pending_career_sync',
@@ -297,33 +340,111 @@ class DatabaseHelper {
     );
   }
 
-  /// Returns queued cloud writes, oldest first.
-  Future<List<PendingCareerSync>> getPendingCareerSync() async {
+  /// Returns [userId]'s queued cloud writes, oldest first.
+  Future<List<PendingCareerSync>> getPendingCareerSync({
+    required String userId,
+  }) async {
     final db = await database;
     final rows = await db.query(
       'pending_career_sync',
+      where: 'user_id = ?',
+      whereArgs: [userId],
       orderBy: 'queued_at ASC',
     );
     return rows.map((row) => PendingCareerSync.fromMap(row)).toList();
   }
 
-  /// Removes one queued operation once the cloud has accepted it.
-  Future<void> clearPendingCareerSync(String careerTitle) async {
+  /// Removes one of [userId]'s queued operations once the cloud accepted it.
+  Future<void> clearPendingCareerSync(
+    String careerTitle, {
+    required String userId,
+  }) async {
     final db = await database;
     await db.delete(
       'pending_career_sync',
-      where: 'career_title = ?',
-      whereArgs: [careerTitle],
+      where: 'user_id = ? AND career_title = ?',
+      whereArgs: [userId, careerTitle],
     );
   }
 
   /// Number of cloud writes still waiting to be flushed.
-  Future<int> pendingCareerSyncCount() async {
+  ///
+  /// Pass [userId] to count one account's queue; omit it for the whole device.
+  Future<int> pendingCareerSyncCount({String? userId}) async {
     final db = await database;
-    final row = await db.rawQuery(
-      'SELECT COUNT(*) AS c FROM pending_career_sync',
-    );
+    final row = userId == null
+        ? await db.rawQuery('SELECT COUNT(*) AS c FROM pending_career_sync')
+        : await db.rawQuery(
+            'SELECT COUNT(*) AS c FROM pending_career_sync WHERE user_id = ?',
+            [userId],
+          );
     return (row.first['c'] as int?) ?? 0;
+  }
+
+  /// Enqueues the sync envelope for a finished attempt (Phase 10.4 / AM-3).
+  ///
+  /// The payload is self-contained — session plus its weak areas — so the
+  /// future flusher never needs to re-query anything. [sessionUuid] is the
+  /// primary key, so re-enqueueing the same attempt upserts instead of
+  /// duplicating it (AM-3).
+  ///
+  /// Guest attempts are not queued: a row with no owner would be uploaded under
+  /// whoever signs in next. They stay in [local_quiz_sessions] for history.
+  Future<void> enqueuePendingSyncResult(
+    QuizSession session, {
+    required List<WeakArea> weakAreas,
+    String? userId,
+  }) async {
+    if (userId == null || userId.isEmpty) {
+      return;
+    }
+
+    final db = await database;
+    await db.insert('pending_sync_results', <String, Object?>{
+      'session_uuid': session.sessionUuid,
+      'user_id': userId,
+      'payload': jsonEncode(<String, Object?>{
+        'session': session.toJson(),
+        'weak_areas': weakAreas.map((area) => area.toJson()).toList(),
+      }),
+      'created_at': session.completedAt.toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Returns queued result envelopes, oldest first, optionally for one account.
+  Future<List<Map<String, Object?>>> getPendingSyncResults({
+    String? userId,
+  }) async {
+    final db = await database;
+    return db.query(
+      'pending_sync_results',
+      where: userId == null ? null : 'user_id = ?',
+      whereArgs: userId == null ? null : [userId],
+      orderBy: 'created_at ASC',
+    );
+  }
+
+  /// Number of result envelopes still waiting to be uploaded.
+  Future<int> pendingSyncResultCount({String? userId}) async {
+    final db = await database;
+    final row = userId == null
+        ? await db.rawQuery('SELECT COUNT(*) AS c FROM pending_sync_results')
+        : await db.rawQuery(
+            'SELECT COUNT(*) AS c FROM pending_sync_results WHERE user_id = ?',
+            [userId],
+          );
+    return (row.first['c'] as int?) ?? 0;
+  }
+
+  /// Local quiz history, newest first — the results screen's read path.
+  Future<List<QuizSession>> getRecentSessions({int limit = 20}) async {
+    final db = await database;
+    final rows = await db.query(
+      'local_quiz_sessions',
+      orderBy: 'completed_at DESC',
+      limit: limit,
+    );
+    return rows.map((row) => QuizSession.fromMap(row)).toList();
   }
 
   /// Aggregates weak-area rows into per-syllabus-topic summaries.

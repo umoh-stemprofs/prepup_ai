@@ -96,27 +96,41 @@ class CareerSyncService {
       _remoteFactory != null ||
       AppConstants.hasSupabaseConfig;
 
-  Future<void> queueUpsert(SavedCareer career) async {
-    if (!canSync) {
-      return;
-    }
-    await _databaseHelper.queueCareerSync(PendingCareerSync.upsert(career));
-  }
-
-  Future<void> queueDelete(String careerTitle) async {
-    if (!canSync) {
+  /// Queues [career] for [userId].
+  ///
+  /// Guests queue nothing: the queue is per account, so an unowned row would be
+  /// flushed into whoever signs in next. A guest's bookmark still persists
+  /// locally and is queued if they save it again while signed in.
+  Future<void> queueUpsert(SavedCareer career, {String? userId}) async {
+    final owner = userId ?? _resolveUserId();
+    if (!canSync || owner == null || owner.isEmpty) {
       return;
     }
     await _databaseHelper.queueCareerSync(
-      PendingCareerSync.delete(careerTitle),
+      PendingCareerSync.upsert(career, userId: owner),
     );
   }
 
-  Future<int> pendingCount() async {
-    if (!canSync) {
+  /// Queues a delete for [careerTitle] against [userId]'s queue.
+  Future<void> queueDelete(String careerTitle, {String? userId}) async {
+    final owner = userId ?? _resolveUserId();
+    if (!canSync || owner == null || owner.isEmpty) {
+      return;
+    }
+    await _databaseHelper.queueCareerSync(
+      PendingCareerSync.delete(careerTitle, userId: owner),
+    );
+  }
+
+  /// How many writes the signed-in user still has waiting.
+  ///
+  /// Returns 0 when nobody is signed in: a guest has no cloud queue.
+  Future<int> pendingCount({String? userId}) async {
+    final owner = userId ?? _resolveUserId();
+    if (!canSync || owner == null || owner.isEmpty) {
       return 0;
     }
-    return _databaseHelper.pendingCareerSyncCount();
+    return _databaseHelper.pendingCareerSyncCount(userId: owner);
   }
 
   // ---------------------------------------------------------------------------
@@ -138,18 +152,18 @@ class CareerSyncService {
       return const CareerSyncReport(skipped: CareerSyncSkip.noRemote);
     }
 
-    final pending = await _databaseHelper.getPendingCareerSync();
+    final userId = _resolveUserId();
+    if (userId == null || userId.isEmpty) {
+      // Guests own no queue rows; report rather than reading the whole device.
+      return const CareerSyncReport(skipped: CareerSyncSkip.notSignedIn);
+    }
+
+    // Only this account's writes: another user's queue on the same device must
+    // never be pushed under this session.
+    final pending = await _databaseHelper.getPendingCareerSync(userId: userId);
     if (pending.isEmpty) {
       _lastError = null;
       return const CareerSyncReport();
-    }
-
-    final userId = _resolveUserId();
-    if (userId == null) {
-      return CareerSyncReport(
-        pending: pending.length,
-        skipped: CareerSyncSkip.notSignedIn,
-      );
     }
 
     // Pick the checker first, then invoke it. Calling `??` directly would
@@ -188,7 +202,10 @@ class CareerSyncService {
               careerTitle: operation.careerTitle,
             );
         }
-        await _databaseHelper.clearPendingCareerSync(operation.careerTitle);
+        await _databaseHelper.clearPendingCareerSync(
+          operation.careerTitle,
+          userId: userId,
+        );
         synced++;
       } catch (error) {
         _lastError = _describe(error);
@@ -198,16 +215,25 @@ class CareerSyncService {
 
     return CareerSyncReport(
       synced: synced,
-      pending: await _databaseHelper.pendingCareerSyncCount(),
+      pending: await _databaseHelper.pendingCareerSyncCount(userId: userId),
       error: _lastError,
     );
   }
 
-  /// Drops a queued write that can never be pushed (e.g. after sign-out).
-  Future<void> discardQueue() async {
-    final pending = await _databaseHelper.getPendingCareerSync();
+  /// Drops the signed-in account's queued writes (e.g. after sign-out).
+  ///
+  /// Other accounts' queues on the same device are left untouched.
+  Future<void> discardQueue({String? userId}) async {
+    final owner = userId ?? _resolveUserId();
+    if (owner == null || owner.isEmpty) {
+      return;
+    }
+    final pending = await _databaseHelper.getPendingCareerSync(userId: owner);
     for (final operation in pending) {
-      await _databaseHelper.clearPendingCareerSync(operation.careerTitle);
+      await _databaseHelper.clearPendingCareerSync(
+        operation.careerTitle,
+        userId: owner,
+      );
     }
   }
 

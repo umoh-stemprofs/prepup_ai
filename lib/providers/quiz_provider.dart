@@ -19,12 +19,19 @@ class QuizProvider extends ChangeNotifier {
   QuizProvider({
     DatabaseHelper? databaseHelper,
     QuestionsLocalService? questionsLocalService,
-  }) : _databaseHelper = databaseHelper ?? DatabaseHelper.instance {
-    _questionsLocalService = questionsLocalService ?? QuestionsLocalService(_databaseHelper);
+    String? Function()? userIdProvider,
+  }) : _databaseHelper = databaseHelper ?? DatabaseHelper.instance,
+       _userIdProvider = userIdProvider {
+    _questionsLocalService =
+        questionsLocalService ?? QuestionsLocalService(_databaseHelper);
   }
 
   late final DatabaseHelper _databaseHelper;
   late final QuestionsLocalService _questionsLocalService;
+
+  /// Resolves the signed-in account, so a finished attempt is queued for the
+  /// student who actually practised. Null means guest: local history only.
+  final String? Function()? _userIdProvider;
 
   // ---------------------------------------------------------------------------
   // Public state
@@ -95,31 +102,48 @@ class QuizProvider extends ChangeNotifier {
 
   /// Start a new quiz for [subject] with [questionCount] questions.
   ///
+  /// When [syllabusTopic] is given the question pool is narrowed to that
+  /// sub-topic, which is what "practice red topics" needs: drilling the topic
+  /// that was missed instead of the whole subject. A topic-scoped request that
+  /// finds no cached questions returns an empty quiz rather than silently
+  /// widening back to the subject.
+  ///
   /// Fetches questions from the local cache, shuffles options independently
   /// for each question, and starts a countdown timer. The timer auto-finishes
   /// the quiz when it reaches zero.
   Future<void> startQuiz({
     required String subject,
     required int questionCount,
+    String? syllabusTopic,
   }) async {
     _resetState();
 
     // Duration: 15 minutes for 10 questions, 30 minutes for 20 questions.
-    final durationMinutes =
-        questionCount <= 10 ? 15 : 30;
+    final durationMinutes = questionCount <= 10 ? 15 : 30;
     _originalDurationSeconds = durationMinutes * 60;
     _remainingSeconds = _originalDurationSeconds;
 
-    // Fetch questions from the local cache.
-    final rows = await _questionsLocalService.getQuestionsBySubject(
-      subject,
-      limit: questionCount,
-    );
+    // Fetch questions from the local cache, narrowed to one sub-topic when
+    // the caller asked for one.
+    final bool scopedToTopic =
+        syllabusTopic != null && syllabusTopic.trim().isNotEmpty;
+    final rows = scopedToTopic
+        ? await _questionsLocalService.getQuestionsByTopic(
+            subject,
+            syllabusTopic,
+            limit: questionCount,
+          )
+        : await _questionsLocalService.getQuestionsBySubject(
+            subject,
+            limit: questionCount,
+          );
 
     // Convert DB rows to Question objects, then shuffle options independently.
-    _questions = rows.map((Map<String, dynamic> row) {
-      return Question.fromMap(row).shuffleOptions();
-    }).toList(growable: false);
+    _questions = rows
+        .map((Map<String, dynamic> row) {
+          return Question.fromMap(row).shuffleOptions();
+        })
+        .toList(growable: false);
 
     _startCountdownTimer();
     notifyListeners();
@@ -164,10 +188,16 @@ class QuizProvider extends ChangeNotifier {
     final session = _buildSession();
     _lastSession = session;
 
-    // Persist to local SQLite.
+    // Persist to local SQLite and enqueue the cloud envelope (Phase 10.4).
+    final areas = _buildWeakAreas();
     try {
       await _databaseHelper.saveQuizSession(session);
-      await _databaseHelper.saveWeakAreas(_buildWeakAreas(session.sessionUuid));
+      await _databaseHelper.saveWeakAreas(session.sessionUuid, areas);
+      await _databaseHelper.enqueuePendingSyncResult(
+        session,
+        weakAreas: areas,
+        userId: _userIdProvider?.call(),
+      );
     } catch (_) {
       // Best-effort persistence. The in-memory result is still available via
       // [lastSession] even if the write fails.
@@ -184,18 +214,15 @@ class QuizProvider extends ChangeNotifier {
 
   void _startCountdownTimer() {
     _countdownTimer?.cancel();
-    _countdownTimer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) {
-        if (_remainingSeconds <= 0) {
-          _countdownTimer?.cancel();
-          finishQuiz();
-          return;
-        }
-        _remainingSeconds--;
-        notifyListeners();
-      },
-    );
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_remainingSeconds <= 0) {
+        _countdownTimer?.cancel();
+        finishQuiz();
+        return;
+      }
+      _remainingSeconds--;
+      notifyListeners();
+    });
   }
 
   void _cancelCountdownTimer() {
@@ -212,7 +239,9 @@ class QuizProvider extends ChangeNotifier {
     final uuid = _generateUuid();
     return QuizSession(
       sessionUuid: uuid,
-      subject: _questions.isNotEmpty ? _questions.first.subject : 'All Subjects',
+      subject: _questions.isNotEmpty
+          ? _questions.first.subject
+          : 'All Subjects',
       score: correctCount,
       totalQuestions: _questions.length,
       scorePercentage: scorePercentage,
@@ -222,7 +251,11 @@ class QuizProvider extends ChangeNotifier {
     );
   }
 
-  List<WeakArea> _buildWeakAreas(String sessionUuid) {
+  /// Weak areas for the attempt just finished, built from the in-memory
+  /// questions and answers — never re-queried from the database.
+  List<WeakArea> get currentWeakAreas => _buildWeakAreas();
+
+  List<WeakArea> _buildWeakAreas() {
     final Map<String, WeakArea> byTopic = <String, WeakArea>{};
 
     for (int i = 0; i < _questions.length; i++) {
@@ -243,7 +276,8 @@ class QuizProvider extends ChangeNotifier {
         byTopic[key] = WeakArea(
           subject: existing.subject,
           syllabusTopic: existing.syllabusTopic,
-          incorrectCount: existing.incorrectCount +
+          incorrectCount:
+              existing.incorrectCount +
               (selected == question.correctOptionIndex ? 0 : 1),
           totalCount: existing.totalCount + 1,
         );
@@ -281,20 +315,22 @@ class QuizProvider extends ChangeNotifier {
     _lastSession = null;
     _originalDurationSeconds = 0;
     _frozenRemainingAtCompletion = 0;
-  }  bool get _canNavigate => !_isCompleted && _questions.isNotEmpty;
+  }
+
+  bool get _canNavigate => !_isCompleted && _questions.isNotEmpty;
 
   void _freezeRemainingOnCompletion() {
     _frozenRemainingAtCompletion = _remainingSeconds;
   }
-
-  
 
   static String _generateUuid() {
     final Random rng = Random.secure();
     final List<int> bytes = List<int>.generate(16, (_) => rng.nextInt(256));
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    final hex = bytes.map((int b) => b.toRadixString(16).padLeft(2, '0')).join();
+    final hex = bytes
+        .map((int b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
     return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
   }
 

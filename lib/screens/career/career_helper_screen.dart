@@ -3,8 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme.dart';
 import '../../providers/career_provider.dart';
-import 'saved_careers_screen.dart';
 
+/// "Find Jobs For You" — the career matcher from `design/career/code.html`.
+///
+/// The export renders the match inline below the FIND JOBS action, so this
+/// screen keeps the card in the scroll view rather than opening a bottom sheet.
 class CareerHelperScreen extends StatefulWidget {
   const CareerHelperScreen({super.key});
 
@@ -13,258 +16,218 @@ class CareerHelperScreen extends StatefulWidget {
 }
 
 class _CareerHelperScreenState extends State<CareerHelperScreen> {
+  CareerMatch? _match;
+
   @override
   void initState() {
     super.initState();
-    // Read bookmarks once so the header count is correct after a restart.
+    // Read bookmarks once so a restart does not leave the sync count stale.
     final provider = context.read<CareerProvider>();
     if (!provider.savedCareersLoaded) {
       provider.loadSavedCareers();
     }
   }
 
+  void _findJobs() {
+    final provider = context.read<CareerProvider>();
+    setState(() => _match = provider.match());
+  }
+
+  void _clearMatch() {
+    if (_match != null) {
+      setState(() => _match = null);
+    }
+  }
+
+  Future<void> _saveMatch() async {
+    final provider = context.read<CareerProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final saved = await provider.saveCurrentMatch();
+    messenger.showSnackBar(
+      SnackBar(content: Text('Saved ${saved.careerTitle} to your careers')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final savedCount = context.select(
-      (CareerProvider p) => p.savedCareers.length,
-    );
+    final provider = context.watch<CareerProvider>();
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       body: SafeArea(
+        bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Header(
-                savedCount: savedCount,
-                onOpenSaved: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const SavedCareersScreen(),
-                    ),
-                  );
-                },
+              const _BackRow(),
+              const Text(
+                'Find Jobs For You',
+                style: TextStyle(
+                  fontSize: 28,
+                  height: 36 / 28,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.onSurface,
+                ),
               ),
-              const SizedBox(height: 8),
-              _QuestionCard(
+              const SizedBox(height: 4),
+              const Text(
+                'Tap what you like best:',
+                style: TextStyle(
+                  fontSize: 18,
+                  height: 28 / 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _Section(
                 title: 'Where do you like to work?',
                 children: [
                   _ChoiceCard(
                     icon: Icons.domain,
                     label: 'Indoors / Office',
                     isSelected:
-                        context.select((CareerProvider p) =>
-                            p.workEnvironment == WorkEnvironment.indoor),
+                        provider.workEnvironment == WorkEnvironment.indoor,
                     onTap: () {
-                      context.read<CareerProvider>().setWorkEnvironment(
-                            WorkEnvironment.indoor,
-                          );
+                      _clearMatch();
+                      provider.setWorkEnvironment(WorkEnvironment.indoor);
                     },
                   ),
                   _ChoiceCard(
                     icon: Icons.park,
                     label: 'Outdoors / Field',
                     isSelected:
-                        context.select((CareerProvider p) =>
-                            p.workEnvironment == WorkEnvironment.outdoor),
+                        provider.workEnvironment == WorkEnvironment.outdoor,
                     onTap: () {
-                      context.read<CareerProvider>().setWorkEnvironment(
-                            WorkEnvironment.outdoor,
-                          );
+                      _clearMatch();
+                      provider.setWorkEnvironment(WorkEnvironment.outdoor);
                     },
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              _QuestionCard(
+              const SizedBox(height: 24),
+              _Section(
                 title: 'What do you like doing?',
                 children: [
                   _ChoiceCard(
                     icon: Icons.calculate,
                     label: 'Solving Math',
                     isSelected:
-                        context.select((CareerProvider p) =>
-                            p.activityPreference == ActivityPreference.solvingMath),
+                        provider.activityPreference ==
+                        ActivityPreference.solvingMath,
                     onTap: () {
-                      context.read<CareerProvider>().setActivityPreference(
-                            ActivityPreference.solvingMath,
-                          );
+                      _clearMatch();
+                      provider.setActivityPreference(
+                        ActivityPreference.solvingMath,
+                      );
                     },
                   ),
                   _ChoiceCard(
                     icon: Icons.construction,
                     label: 'Building Things',
                     isSelected:
-                        context.select((CareerProvider p) =>
-                            p.activityPreference == ActivityPreference.building),
+                        provider.activityPreference ==
+                        ActivityPreference.building,
                     onTap: () {
-                      context.read<CareerProvider>().setActivityPreference(
-                            ActivityPreference.building,
-                          );
+                      _clearMatch();
+                      provider.setActivityPreference(
+                        ActivityPreference.building,
+                      );
                     },
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              _QuestionCard(
+              const SizedBox(height: 24),
+              _Section(
                 title: 'Pick your favorite subject:',
                 children: [
-                  _InlineChoiceCard(
+                  _SubjectCard(
                     icon: Icons.functions,
                     label: 'Mathematics',
-                    isSelected:
-                        context.select(
-                            (CareerProvider p) => p.favoriteSubjects.contains('Mathematics')),
+                    isSelected: provider.favoriteSubjects.contains(
+                      'Mathematics',
+                    ),
                     onTap: () {
-                      context.read<CareerProvider>().setFavoriteSubject('Mathematics');
+                      _clearMatch();
+                      provider.setFavoriteSubject('Mathematics');
                     },
                   ),
-                  _InlineChoiceCard(
+                  _SubjectCard(
                     icon: Icons.bolt,
                     label: 'Physics',
-                    isSelected:
-                        context.select(
-                            (CareerProvider p) => p.favoriteSubjects.contains('Physics')),
+                    isSelected: provider.favoriteSubjects.contains('Physics'),
                     onTap: () {
-                      context.read<CareerProvider>().setFavoriteSubject('Physics');
+                      _clearMatch();
+                      provider.setFavoriteSubject('Physics');
                     },
                   ),
-                  _InlineChoiceCard(
+                  _SubjectCard(
                     icon: Icons.science,
                     label: 'Chemistry',
-                    isSelected:
-                        context.select(
-                            (CareerProvider p) => p.favoriteSubjects.contains('Chemistry')),
+                    isSelected: provider.favoriteSubjects.contains('Chemistry'),
                     onTap: () {
-                      context.read<CareerProvider>().setFavoriteSubject('Chemistry');
+                      _clearMatch();
+                      provider.setFavoriteSubject('Chemistry');
                     },
                   ),
-                  _InlineChoiceCard(
+                  _SubjectCard(
                     icon: Icons.biotech,
                     label: 'Biology',
-                    isSelected:
-                        context.select(
-                            (CareerProvider p) => p.favoriteSubjects.contains('Biology')),
+                    isSelected: provider.favoriteSubjects.contains('Biology'),
                     onTap: () {
-                      context.read<CareerProvider>().setFavoriteSubject('Biology');
+                      _clearMatch();
+                      provider.setFavoriteSubject('Biology');
                     },
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: AppDimensions.buttonHeight,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    _showMatchSheet(context);
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF824500),
-                    foregroundColor: AppColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  icon: const Icon(Icons.auto_awesome),
-                  label: const Text('FIND JOBS FOR ME'),
-                ),
+              const SizedBox(height: 24),
+              _ActionButton(
+                backgroundColor: AppColors.tertiaryContainer,
+                foregroundColor: AppColors.onTertiaryContainer,
+                icon: Icons.auto_awesome,
+                label: 'FIND JOBS FOR ME',
+                onPressed: _findJobs,
               ),
-              const SizedBox(height: 16),
+              if (_match != null) ...[
+                const SizedBox(height: 16),
+                _MatchResult(match: _match!, onSave: _saveMatch),
+              ],
             ],
           ),
         ),
       ),
     );
   }
-
-  void _showMatchSheet(BuildContext context) {
-    final provider = context.read<CareerProvider>();
-    final messenger = ScaffoldMessenger.of(context);
-    final match = provider.match();
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          expand: false,
-          builder: (context, scrollController) {
-            return _MatchSheetContent(
-              scrollController: scrollController,
-              match: match,
-              onSave: () async {
-                // Persisted through the provider so it survives a restart.
-                final saved = await provider.saveCurrentMatch();
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text('Saved ${saved.careerTitle} to your careers'),
-                  ),
-                );
-              },
-              onSaveAnother: () {
-                provider.reset();
-                Navigator.of(sheetContext).pop();
-              },
-            );
-          },
-        );
-      },
-    );
-  }
 }
 
-class _Header extends StatelessWidget {
-  final int savedCount;
-  final VoidCallback? onOpenSaved;
-
-  const _Header({this.savedCount = 0, this.onOpenSaved});
+class _BackRow extends StatelessWidget {
+  const _BackRow();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 8),
-        Text(
-          'Find Jobs For You',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
+    // The export has no app bar; this keeps the screen escapable on desktop.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 4, top: 4),
+        child: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Tap what you like best:',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textPrimary.withValues(alpha: 0.6),
-              ),
-        ),
-        if (savedCount > 0 && onOpenSaved != null)
-          TextButton.icon(
-            onPressed: onOpenSaved,
-            icon: const Icon(Icons.bookmark_outline, size: 18),
-            label: Text('View saved careers ($savedCount)'),
-          ),
-      ],
+      ),
     );
   }
 }
 
-class _QuestionCard extends StatelessWidget {
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.children});
+
   final String title;
   final List<Widget> children;
-
-  const _QuestionCard({
-    required this.title,
-    required this.children,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -273,24 +236,30 @@ class _QuestionCard extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
+          style: const TextStyle(
+            fontSize: 16,
+            height: 24 / 16,
+            fontWeight: FontWeight.w700,
+            color: AppColors.onSurface,
+          ),
         ),
-        const SizedBox(height: 10),
-        ...children,
+        const SizedBox(height: 12),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.75,
+          children: children,
+        ),
       ],
     );
   }
 }
 
-class _ChoiceCard extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
+/// Two-up choice tile: icon above an 18px label, 12px radius.
+class _ChoiceCard extends StatelessWidget {
   const _ChoiceCard({
     required this.icon,
     required this.label,
@@ -298,188 +267,196 @@ class _ChoiceCard extends StatefulWidget {
     required this.onTap,
   });
 
-  @override
-  State<_ChoiceCard> createState() => _ChoiceCardState();
-}
-
-class _ChoiceCardState extends State<_ChoiceCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 120),
-      vsync: this,
-    );
-    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _handleTapDown(TapDownDetails _) => _controller.forward();
-  void _handleTapUp(TapUpDetails _) => _controller.reverse();
-  void _handleTapCancel() => _controller.reverse();
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
-      onTap: widget.onTap,
-      child: AnimatedBuilder(
-        animation: _scale,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scale.value,
-            child: child,
-          );
-        },
-        child: Card(
-          color: widget.isSelected
-              ? const Color(0xFF2563EB).withValues(alpha: 0.12)
-              : AppColors.background,
-          elevation: widget.isSelected ? 3 : 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: widget.isSelected
-                ? const BorderSide(color: AppColors.primary, width: 2)
-                : BorderSide.none,
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: widget.onTap,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    widget.icon,
-                    size: 36,
-                    color: widget.isSelected
-                        ? AppColors.primary
-                        : AppColors.textPrimary.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.label,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: widget.isSelected
-                              ? AppColors.primary
-                              : AppColors.textPrimary.withValues(alpha: 0.7),
-                          fontWeight: FontWeight.w600,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+    final Color background = isSelected
+        ? AppColors.primaryContainer
+        : AppColors.surfaceContainerLow;
+    final Color foreground = isSelected
+        ? AppColors.onPrimaryContainer
+        : AppColors.onSurface;
+
+    return _PressableCard(
+      background: background,
+      radius: 12,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 30, color: foreground),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 18,
+                height: 28 / 18,
+                fontWeight: FontWeight.w700,
+                color: foreground,
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _InlineChoiceCard extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _InlineChoiceCard({
+/// Subject tile: icon beside the label, filled primary when selected.
+class _SubjectCard extends StatelessWidget {
+  const _SubjectCard({
     required this.icon,
     required this.label,
     required this.isSelected,
     required this.onTap,
   });
 
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
   @override
-  State<_InlineChoiceCard> createState() => _InlineChoiceCardState();
+  Widget build(BuildContext context) {
+    final Color background = isSelected
+        ? AppColors.primaryAction
+        : AppColors.surfaceContainerLow;
+    final Color foreground = isSelected ? Colors.white : AppColors.onSurface;
+    final Color iconColor = isSelected
+        ? Colors.white
+        : AppColors.onSurfaceVariant;
+
+    return _PressableCard(
+      background: background,
+      radius: 12,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icon, size: 24, color: iconColor),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 18,
+                  height: 28 / 18,
+                  fontWeight: FontWeight.w700,
+                  color: foreground,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _InlineChoiceCardState extends State<_InlineChoiceCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
+/// Flat shadowed tile with the export's press-to-scale feedback.
+class _PressableCard extends StatefulWidget {
+  const _PressableCard({
+    required this.background,
+    required this.radius,
+    required this.onTap,
+    required this.child,
+  });
+
+  final Color background;
+  final double radius;
+  final VoidCallback onTap;
+  final Widget child;
 
   @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 120),
-      vsync: this,
-    );
-    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(_controller);
-  }
+  State<_PressableCard> createState() => _PressableCardState();
+}
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _handleTapDown(TapDownDetails _) => _controller.forward();
-  void _handleTapUp(TapUpDetails _) => _controller.reverse();
-  void _handleTapCancel() => _controller.reverse();
+class _PressableCardState extends State<_PressableCard> {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: _handleTapDown,
-      onTapUp: _handleTapUp,
-      onTapCancel: _handleTapCancel,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
       onTap: widget.onTap,
-      child: AnimatedBuilder(
-        animation: _scale,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scale.value,
-            child: child,
-          );
-        },
-        child: Card(
-          color: widget.isSelected
-              ? AppColors.primary
-              : AppColors.background,
-          elevation: widget.isSelected ? 3 : 1,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: widget.onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              child: Row(
-                children: [
-                  Icon(
-                    widget.icon,
-                    size: 24,
-                    color: widget.isSelected
-                        ? AppColors.white
-                        : AppColors.textPrimary.withValues(alpha: 0.4),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    widget.label,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: widget.isSelected
-                              ? AppColors.white
-                              : AppColors.textPrimary.withValues(alpha: 0.7),
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ],
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1,
+        duration: const Duration(milliseconds: 120),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: widget.background,
+            borderRadius: BorderRadius.circular(widget.radius),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x14000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
               ),
+            ],
+          ),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.backgroundColor,
+    required this.foregroundColor,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 60,
+      width: double.infinity,
+      child: Material(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onPressed,
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 24, color: foregroundColor),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 24,
+                    height: 32 / 24,
+                    fontWeight: FontWeight.w800,
+                    color: foregroundColor,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -488,221 +465,204 @@ class _InlineChoiceCardState extends State<_InlineChoiceCard>
   }
 }
 
-class _MatchSheetContent extends StatefulWidget {
-  final ScrollController scrollController;
+class _MatchResult extends StatefulWidget {
+  const _MatchResult({required this.match, required this.onSave});
+
   final CareerMatch match;
   final Future<void> Function() onSave;
-  final VoidCallback onSaveAnother;
-
-  const _MatchSheetContent({
-    required this.scrollController,
-    required this.match,
-    required this.onSave,
-    required this.onSaveAnother,
-  });
 
   @override
-  State<_MatchSheetContent> createState() => _MatchSheetContentState();
+  State<_MatchResult> createState() => _MatchResultState();
 }
 
-class _MatchSheetContentState extends State<_MatchSheetContent> {
+class _MatchResultState extends State<_MatchResult> {
   bool _saving = false;
 
-  Future<void> _handleSave() async {
+  Future<void> _save() async {
     if (_saving) return;
     setState(() => _saving = true);
     await widget.onSave();
     if (!mounted) return;
-    Navigator.of(context).pop();
+    setState(() => _saving = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final match = widget.match;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 12,
-        bottom: MediaQuery.of(context).padding.bottom + 16,
-      ),
-      child: Column(
-        children: [
-          // Handle bar
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: AppColors.textPrimary.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(2),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Your Top Match',
+                style: TextStyle(
+                  fontSize: 24,
+                  height: 32 / 24,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.onSurface,
+                ),
               ),
             ),
-          ),
-          // Top match header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Your Top Match',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.secondaryContainer,
+                borderRadius: BorderRadius.circular(999),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF824500).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(4),
+              child: Text(
+                '${match.matchPercentage}% Match',
+                style: const TextStyle(
+                  fontSize: 12,
+                  height: 16 / 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.secondary,
                 ),
-                child: Text(
-                  '${match.matchPercentage}% Match',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF824500),
-                        fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1F000000),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryFixed,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.engineering,
+                      size: 30,
+                      color: AppColors.primaryAction,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          match.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            height: 36 / 28,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          match.summary,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            height: 28 / 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final subject in match.subjects)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
                       ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceHigh,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        subject,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          height: 16 / 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 60,
+                width: double.infinity,
+                child: Material(
+                  color: AppColors.secondary,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: _saving ? null : _save,
+                    child: Center(
+                      child: _saving
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.bookmark,
+                                  size: 24,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'SAVE THIS JOB',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    height: 32 / 24,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          // Career match card
-          Expanded(
-            child: SingleChildScrollView(
-              controller: widget.scrollController,
-              child: Column(
-                children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 64,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Icon(
-                                  Icons.engineering,
-                                  size: 32,
-                                  color: AppColors.white,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      match.title,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineMedium
-                                          ?.copyWith(
-                                            color: AppColors.textPrimary,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      match.summary,
-                                      style:
-                                          Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                color: AppColors.textPrimary
-                                                    .withValues(alpha: 0.6),
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          // Subject tags
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: match.subjects.map((s) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.background,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: AppColors.textPrimary.withValues(alpha: 0.15),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  s,
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                        color: AppColors.textPrimary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Save button
-                  SizedBox(
-                    width: double.infinity,
-                    height: AppDimensions.buttonHeight,
-                    child: FilledButton.icon(
-                      onPressed: _saving ? null : _handleSave,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF006e2d),
-                        foregroundColor: AppColors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: _saving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.white,
-                              ),
-                            )
-                          : const Icon(Icons.bookmark, size: 20),
-                      label: Text(_saving ? 'SAVING…' : 'SAVE THIS JOB'),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Reset / close
-                  TextButton(
-                    onPressed: _saving ? null : widget.onSaveAnother,
-                    child: const Text('Save another career'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

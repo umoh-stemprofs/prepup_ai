@@ -47,23 +47,28 @@ class WeakArea {
   /// correct renders with a green `GOOD` badge.
   bool get isGood => !isNeedsPractice;
 
+  /// Phase 10.2 label: `Chemistry: Organic Reactions — 1/4 Correct (25%)`.
+  String get displayLabel =>
+      '$subject: $syllabusTopic — $correctCount/$totalCount Correct '
+      '(${accuracyPercentage.round()}%)';
+
   // ---------------------------------------------------------------------------
   // Serialization
   // ---------------------------------------------------------------------------
 
   factory WeakArea.fromJson(Map<String, dynamic> json) => WeakArea(
-        subject: json['subject'] as String,
-        syllabusTopic: json['syllabus_topic'] as String,
-        incorrectCount: json['incorrect_count'] as int,
-        totalCount: json['total_count'] as int,
-      );
+    subject: json['subject'] as String,
+    syllabusTopic: json['syllabus_topic'] as String,
+    incorrectCount: json['incorrect_count'] as int,
+    totalCount: json['total_count'] as int,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'subject': subject,
-        'syllabus_topic': syllabusTopic,
-        'incorrect_count': incorrectCount,
-        'total_count': totalCount,
-      };
+    'subject': subject,
+    'syllabus_topic': syllabusTopic,
+    'incorrect_count': incorrectCount,
+    'total_count': totalCount,
+  };
 
   /// Same as [fromJson]; sqflite rows share the JSON column names.
   factory WeakArea.fromMap(Map<String, dynamic> map) => WeakArea.fromJson(map);

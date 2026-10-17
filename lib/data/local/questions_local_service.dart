@@ -30,6 +30,27 @@ class QuestionsLocalService {
     return rows.map(_decodeOptionsRow).toList();
   }
 
+  /// Returns up to [limit] random questions for [subject] restricted to
+  /// [syllabusTopic].
+  ///
+  /// Used by "practice red topics": drilling the sub-topic that was answered
+  /// wrongly, rather than the whole subject.
+  Future<List<Map<String, dynamic>>> getQuestionsByTopic(
+    String subject,
+    String syllabusTopic, {
+    int limit = 10,
+  }) async {
+    final db = await _databaseHelper.database;
+    final rows = await db.query(
+      'local_questions',
+      where: 'subject = ? AND syllabus_topic = ?',
+      whereArgs: [subject, syllabusTopic],
+      orderBy: 'RANDOM()',
+      limit: limit,
+    );
+    return rows.map(_decodeOptionsRow).toList();
+  }
+
   /// Returns the number of cached questions per subject.
   Future<Map<String, int>> getAllSubjectsQuestionCounts() async {
     final db = await _databaseHelper.database;
@@ -55,9 +76,6 @@ class QuestionsLocalService {
     } else {
       options = (jsonDecode(optionsRaw as String) as List).cast<dynamic>();
     }
-    return {
-      ...row,
-      'options': options.cast<String>(),
-    };
+    return {...row, 'options': options.cast<String>()};
   }
 }

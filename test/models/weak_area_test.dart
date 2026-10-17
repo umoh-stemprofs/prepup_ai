@@ -52,6 +52,22 @@ void main() {
     });
   });
 
+  group('WeakArea display', () {
+    test('displayLabel matches the Phase 10 "1/4 Correct (25%)" format', () {
+      const topic = WeakArea(
+        subject: 'Chemistry',
+        syllabusTopic: 'Organic Reactions',
+        incorrectCount: 3,
+        totalCount: 4,
+      );
+
+      expect(
+        topic.displayLabel,
+        'Chemistry: Organic Reactions — 1/4 Correct (25%)',
+      );
+    });
+  });
+
   group('WeakArea serialization', () {
     test('fromJson/toJson round-trip preserves every field', () {
       const WeakArea area = WeakArea(
@@ -64,7 +80,12 @@ void main() {
       expect(WeakArea.fromJson(area.toJson()), equals(area));
       expect(
         area.toJson().keys.toSet(),
-        equals(<String>{'subject', 'syllabus_topic', 'incorrect_count', 'total_count'}),
+        equals(<String>{
+          'subject',
+          'syllabus_topic',
+          'incorrect_count',
+          'total_count',
+        }),
       );
     });
 
