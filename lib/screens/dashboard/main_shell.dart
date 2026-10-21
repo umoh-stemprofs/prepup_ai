@@ -47,7 +47,7 @@ class _MainShellState extends State<MainShell> {
       selectedIcon: Icon(Icons.person),
       label: 'Profile',
     ),
- ];
+  ];
 
   Widget _tab(int i) {
     return _tabs[i] ??= <Widget>[
@@ -61,9 +61,7 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Each tab renders its own Scaffold (some are reused as pushed routes),
-      // so the shell only owns the navigation bar.
-      body: _tab(_index),
+      body: IndexedTuple(widget: _index == 3 ? _profileTab() : _tab(_index)),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.surfaceContainerLowest,
@@ -77,7 +75,7 @@ class _MainShellState extends State<MainShell> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
           child: NavigationBar(
-            backgroundColor:Colors.transparent,
+            backgroundColor: Colors.transparent,
             selectedIndex: _index,
             onDestinationSelected: (int index) {
               setState(() => _index = index);
@@ -89,4 +87,14 @@ class _MainShellState extends State<MainShell> {
       ),
     );
   }
+}
+
+
+class IndexedTuple extends StatelessWidget {
+  final Widget widget;
+
+  const IndexedTuple({required this.widget});
+
+  @override
+  Widget build(BuildContext context) => widget;
 }

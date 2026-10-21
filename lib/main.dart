@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/career_sync_lifecycle.dart';
 import 'core/constants.dart';
 import 'core/theme.dart';
+import 'data/remote/sync_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/career_provider.dart';
 import 'providers/quiz_provider.dart';
@@ -72,12 +73,19 @@ class _PrepUpAppState extends State<PrepUpApp> {
         ChangeNotifierProvider<CareerProvider>.value(value: _career),
         Provider<ResultsProvider>(create: (_) => ResultsProvider(_quiz)),
       ],
-      child: CareerSyncLifecycle(
-        child: MaterialApp(
-          title: AppConstants.appName,
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          home: const MainShell(),
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SyncService>(
+            create: (_) => SyncService(),
+          ),
+        ],
+        child: CareerSyncLifecycle(
+          child: MaterialApp(
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light,
+            home: const MainShell(),
+          ),
         ),
       ),
     );

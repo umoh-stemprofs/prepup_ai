@@ -1,7 +1,4 @@
 import 'dart:convert';
-
-import 'package:sqflite/sqflite.dart';
-
 import 'package:prepup_ai/core/constants.dart';
 import 'database_helper.dart';
 
@@ -76,7 +73,7 @@ class QuestionsLocalService {
     if (optionsRaw is List<dynamic>) {
       options = optionsRaw;
     } else {
-      options = (jsonDecode(optionsRaw as String) as List).cast<dynamic>();
+      options = (jsonDecode(optionsRaw as String) as List).cast<String>();
     }
     return {...row, 'options': options.cast<String>()};
   }

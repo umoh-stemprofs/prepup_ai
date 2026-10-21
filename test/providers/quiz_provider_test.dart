@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -6,7 +5,6 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:prepup_ai/core/constants.dart';
 import 'package:prepup_ai/data/local/database_helper.dart';
 import 'package:prepup_ai/data/local/questions_local_service.dart';
-import 'package:prepup_ai/models/question.dart';
 import 'package:prepup_ai/models/quiz_session.dart';
 import 'package:prepup_ai/models/weak_area.dart';
 import 'package:prepup_ai/providers/quiz_provider.dart';

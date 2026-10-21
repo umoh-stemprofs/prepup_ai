@@ -109,13 +109,12 @@ Future<void> main() async {
   buffer.writeln('-- End of seed data.');
 
   await File(_outputPath).writeAsString(buffer.toString());
-  print('Wrote ${questions.length} question rows to $_outputPath');
 }
 
 String _jsonbArray(List options) {
   final parts = <String>[];
   for (final option in options) {
-    parts.add("'" + sqlEscape(option.toString()) + "'");
+    parts.add("'${sqlEscape(option.toString())}'");
   }
-  return 'jsonb_build_array(' + parts.join(', ') + ')::jsonb';
+  return 'jsonb_build_array(${parts.join(', ')})::jsonb';
 }

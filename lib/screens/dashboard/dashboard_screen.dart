@@ -5,6 +5,7 @@ import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../data/local/database_helper.dart';
 import 'dart:async';
+import '../../data/remote/sync_service.dart';
 import '../../models/quiz_session.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/career_provider.dart';
@@ -99,8 +100,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final career = context.watch<CareerProvider>();
+    final syncService = context.watch<SyncService>();
     final textTheme = Theme.of(context).textTheme;
     final pendingSync = career.pendingSyncCount;
+    final pendingResults = syncService.busy;
+
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -270,7 +274,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
 
-            // ── Pending sync banner ────────────────────────────────────────
+            // ── Pending sync banner (career bookmarks) ────────────────────
             if (pendingSync > 0) ...[
               SliverToBoxAdapter(
                 child: Padding(
@@ -280,6 +284,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     busy: career.isSyncing,
                     error: career.lastSyncError,
                     onRetry: () => career.flushPendingSync(),
+                  ),
+                ),
+              ),
+            ],
+
+            // ── Pending results sync banner ────────────────────────────────
+            if (pendingResults) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Syncing your results to the cloud\u2026',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: AppColors.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
